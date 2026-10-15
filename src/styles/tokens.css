@@ -1,0 +1,220 @@
+/* CECT Togo — Design Tokens v4.1 */
+:root {
+  /* ── Brand palette ── */
+  --brand-green-900: #065940;   /* dark shade — footer, deep backgrounds */
+  --brand-green-700: #09855B;   /* primary — buttons, links */
+  --brand-green-600: #09855B;   /* alias for components that reference 600 */
+  --brand-green-500: #09855B;   /* alias for components that reference 500 */
+  --brand-gold-500:  #EFB303;
+  --brand-gold-600:  #C89E25;
+  --brand-gold-700:  #CC9D13;
+
+  /* ── Semantic tokens — light mode ── */
+  --color-primary:       #09855B;
+  --color-primary-hover: #076e4c;
+  --color-secondary:     #EFB303;
+  --color-accent:        #09855B;
+
+  --color-bg:            #FFFFFF;
+  --color-surface:       #F5F8F6;
+  --color-text:          #0F1A14;
+  --color-text-muted:    #4B5B52;
+  --color-border:        #DCE5DF;
+
+  --color-hero-bg:       #09855B;
+  --color-footer-bg:     #065940;
+
+  --color-success: #09855B;
+  --color-warning: #C89E25;
+  --color-danger:  #B42318;
+
+  /* ── Glass navbar — light mode ── */
+  --glass-bg:     rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 32px rgba(0, 0, 0, 0.12);
+
+  /* ── Dashboard : palette des graphiques, tons doux et ombres ── */
+  --chart-1: #09855B;
+  --chart-2: #EFB303;
+  --chart-3: #0E7490;
+  --chart-4: #7C3AED;
+  --chart-5: #DB2777;
+  --chart-grid: #E4ECE7;
+  --chart-track: #E9F0EC;
+  --tone-success-bg: #E6F4EC;
+  --tone-warning-bg: #FDF3D6;
+  --tone-danger-bg:  #FDECEA;
+  --tone-info-bg:    #E0F2F7;
+  --tone-violet-bg:  #F0E9FE;
+  --tone-success-fg: #07663F;
+  --tone-warning-fg: #8A6500;
+  --tone-danger-fg:  #B42318;
+  --tone-info-fg:    #0B6179;
+  --tone-violet-fg:  #6D28D9;
+  --tone-rose-fg:    #BE185D;
+  --tone-rose-bg:    #FCE7F3;
+  --dash-bg:   #F1F6F3;
+  --dash-card: #FFFFFF;
+  --shadow-card: 0 1px 2px rgba(15, 26, 20, 0.04), 0 8px 24px -12px rgba(15, 26, 20, 0.12);
+  --shadow-pop:  0 18px 40px -18px rgba(6, 89, 64, 0.35);
+}
+
+:root[data-theme="dark"],
+.dark {
+  --color-primary:       #09855B;
+  --color-primary-hover: #076e4c;
+  --color-secondary:     #EFB303;
+  --color-accent:        #EFB303;
+
+  --color-bg:            #081410;
+  --color-surface:       #0f1e17;
+  --color-text:          #E9F1EC;
+  --color-text-muted:    #A7B8AE;
+  --color-border:        #1e3028;
+
+  --color-hero-bg:       #065940;
+  --color-footer-bg:     #041009;
+
+  --color-success: #09855B;
+  --color-warning: #EFB303;
+  --color-danger:  #f87171;
+
+  --glass-bg:     rgba(9, 133, 91, 0.20);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(0, 0, 0, 0.45);
+  --chart-1: #34C795;
+  --chart-2: #EFB303;
+  --chart-3: #38BDF8;
+  --chart-4: #A78BFA;
+  --chart-5: #F472B6;
+  --chart-grid: #1e3028;
+  --chart-track: #16271f;
+  --tone-success-bg: rgba(52, 199, 149, 0.14);
+  --tone-warning-bg: rgba(239, 179, 3, 0.14);
+  --tone-danger-bg:  rgba(248, 113, 113, 0.14);
+  --tone-info-bg:    rgba(56, 189, 248, 0.14);
+  --tone-violet-bg:  rgba(167, 139, 250, 0.16);
+  --tone-success-fg: #5FDDB0;
+  --tone-warning-fg: #F5C842;
+  --tone-danger-fg:  #FCA5A5;
+  --tone-info-fg:    #7DD3FC;
+  --tone-violet-fg:  #C4B5FD;
+  --tone-rose-fg:    #F9A8D4;
+  --tone-rose-bg:    rgba(244, 114, 182, 0.16);
+  --dash-bg:   #050d09;
+  --dash-card: #0d1b14;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+  --shadow-pop:  0 18px 40px -18px rgba(0, 0, 0, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-primary:       #09855B;
+    --color-primary-hover: #076e4c;
+    --color-secondary:     #EFB303;
+    --color-accent:        #EFB303;
+    --color-bg:            #081410;
+    --color-surface:       #0f1e17;
+    --color-text:          #E9F1EC;
+    --color-text-muted:    #A7B8AE;
+    --color-border:        #1e3028;
+    --color-hero-bg:       #065940;
+    --color-footer-bg:     #041009;
+    --color-success: #09855B;
+    --color-warning: #EFB303;
+    --color-danger:  #f87171;
+    --glass-bg:     rgba(9, 133, 91, 0.20);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 32px rgba(0, 0, 0, 0.45);
+    --chart-1: #34C795;
+    --chart-2: #EFB303;
+    --chart-3: #38BDF8;
+    --chart-4: #A78BFA;
+    --chart-5: #F472B6;
+    --chart-grid: #1e3028;
+    --chart-track: #16271f;
+    --tone-success-bg: rgba(52, 199, 149, 0.14);
+    --tone-warning-bg: rgba(239, 179, 3, 0.14);
+    --tone-danger-bg:  rgba(248, 113, 113, 0.14);
+    --tone-info-bg:    rgba(56, 189, 248, 0.14);
+    --tone-violet-bg:  rgba(167, 139, 250, 0.16);
+    --tone-success-fg: #5FDDB0;
+    --tone-warning-fg: #F5C842;
+    --tone-danger-fg:  #FCA5A5;
+    --tone-info-fg:    #7DD3FC;
+    --tone-violet-fg:  #C4B5FD;
+    --tone-rose-fg:    #F9A8D4;
+    --tone-rose-bg:    rgba(244, 114, 182, 0.16);
+    --dash-bg:   #050d09;
+    --dash-card: #0d1b14;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
+    --shadow-pop:  0 18px 40px -18px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* ── Espaces connectés (membre) : identité « Forêt & lime », aplats uniquement ── */
+:root.app-forest {
+  --forest-900: #051c12;
+  --forest-700: #072f1f;
+  --forest-500: #1a3e30;
+  --lime: #b4f105;
+  --lime-hover: #c1f824;
+  --sidebar-muted: #879a91;
+
+  --color-primary: #0b6b45;
+  --color-primary-hover: #09583a;
+  --color-bg: #ffffff;
+  --color-surface: #f4f6f5;
+  --color-text: #0b130f;
+  --color-text-muted: #6c7e75;
+  --color-border: #e9efef;
+
+  --dash-bg: #f4f6f5;
+  --dash-card: #ffffff;
+  --shadow-card: none;
+  --shadow-pop: 0 12px 32px rgba(5, 28, 18, 0.14);
+
+  --chart-1: #0b6b45;
+  --chart-2: #b4f105;
+  --chart-3: #0e7490;
+  --chart-4: #7c3aed;
+  --chart-5: #db2777;
+  --chart-grid: #e9efef;
+  --chart-track: #edf2ef;
+
+  --tone-success-bg: #dcfce7;
+  --tone-success-fg: #166534;
+  --tone-warning-bg: #ffedd5;
+  --tone-warning-fg: #9a3412;
+  --tone-danger-bg: #fee2e2;
+  --tone-danger-fg: #b42318;
+  --tone-info-bg: #e0f2f7;
+  --tone-info-fg: #0b6179;
+}
+
+:root.app-forest[data-theme='dark'] {
+  --color-primary: #0b8a5a;
+  --color-primary-hover: #0a7a50;
+  --color-bg: #07120d;
+  --color-surface: #0c1f16;
+  --color-text: #e9f1ec;
+  --color-text-muted: #8fa79b;
+  --color-border: #17352a;
+
+  --dash-bg: #07120d;
+  --dash-card: #0c1f16;
+  --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+
+  --chart-1: #34c795;
+  --chart-grid: #17352a;
+  --chart-track: #11291f;
+
+  --tone-success-bg: rgba(52, 199, 149, 0.14);
+  --tone-success-fg: #5fddb0;
+  --tone-warning-bg: rgba(249, 115, 22, 0.16);
+  --tone-warning-fg: #fdba74;
+  --tone-danger-bg: rgba(248, 113, 113, 0.14);
+  --tone-danger-fg: #fca5a5;
+  --tone-info-bg: rgba(56, 189, 248, 0.14);
+  --tone-info-fg: #7dd3fc;
+}
