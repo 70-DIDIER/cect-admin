@@ -30,6 +30,10 @@ if [[ ! -L "$LINK" ]]; then
   exit 2
 fi
 OLD="$(readlink -f "$LINK")"
+[[ "$(basename "$OLD")" == admin-didier-only-* || "$(basename "$OLD")" == admin-c02ce90* ]] || {
+  echo "Déploiement refusé : ancienne release non issue de Didier ($OLD)." >&2
+  exit 2
+}
 [[ -s "$OLD/index.html" ]] || { echo "Impossible de vérifier l'ancienne release." >&2; exit 2; }
 for tool in git npm curl rsync flock; do command -v "$tool" >/dev/null || exit 2; done
 [[ "$(git -C "$SOURCE" config --get remote.origin.url)" == "https://github.com/70-DIDIER/cect-admin.git" ]] || {
