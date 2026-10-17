@@ -4,18 +4,18 @@
 # restent en place. Le pilote Modson n'est PAS inclus dans cette release.
 set -Eeuo pipefail
 
-if [[ "\${CECT_STAGING_DEPLOY:-}" != "YES" ]]; then
+if [[ "${CECT_STAGING_DEPLOY:-}" != "YES" ]]; then
   echo "Déploiement refusé : CECT_STAGING_DEPLOY=YES requis." >&2
   exit 2
 fi
 
-SOURCE="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-LINK="\${CECT_ADMIN_LINK:-/home/ubuntu/cect-current/admin}"
-RELEASES="\${CECT_ADMIN_RELEASES:-/home/ubuntu/cect-releases}"
-LARAVEL_ENV="\${CECT_LARAVEL_ENV_FILE:-/var/www/cect-api/.env}"
-ADMIN_URL="\${CECT_ADMIN_ORIGIN:-https://admin.13-49-203-235.sslip.io}"
-API_URL="\${VITE_API_URL:-https://api.13-49-203-235.sslip.io}"
-FRONT_URL="\${CECT_PUBLIC_ORIGIN:-https://13-49-203-235.sslip.io}"
+SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LINK="${CECT_ADMIN_LINK:-/home/ubuntu/cect-current/admin}"
+RELEASES="${CECT_ADMIN_RELEASES:-/home/ubuntu/cect-releases}"
+LARAVEL_ENV="${CECT_LARAVEL_ENV_FILE:-/var/www/cect-api/.env}"
+ADMIN_URL="${CECT_ADMIN_ORIGIN:-https://admin.13-49-203-235.sslip.io}"
+API_URL="${VITE_API_URL:-https://api.13-49-203-235.sslip.io}"
+FRONT_URL="${CECT_PUBLIC_ORIGIN:-https://13-49-203-235.sslip.io}"
 
 if [[ ! -r "$LARAVEL_ENV" ]] || ! grep -Eq '^APP_ENV=staging$' "$LARAVEL_ENV"; then
   echo "Déploiement refusé : APP_ENV=staging non confirmé." >&2
