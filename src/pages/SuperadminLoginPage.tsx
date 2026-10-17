@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { FileKey2, LockKeyhole, MailCheck, ShieldCheck, RotateCcw, Download } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { get, post, toApiError } from '@/lib/api'
-import { createKeyMaterial, createKeyFile, downloadKeyFile, parseKeyFile, signChallenge, type SuperadminKeyFile } from '@/lib/superadminKeys'
+import { createKeyMaterial, createKeyFile, downloadKeyFile, parseKeyFile, publicPemFromKeyFile, signChallenge, type SuperadminKeyFile } from '@/lib/superadminKeys'
 
 type Stage = 'loading' | 'enroll-emails' | 'enroll-codes' | 'select-key' | 'login-code' | 'rotate-codes' | 'recover-codes' | 'activate'
 type Status = { initialized: boolean; has_active_key: boolean; key_validity_days: number }
@@ -58,6 +58,18 @@ export default function SuperadminLoginPage() {
     if (!result.challenge_id) throw new Error('Code de vérification non reçu.')
     setChallengeId(result.challenge_id)
     setStage('login-code')
+  }
+
+  async function initialEnrollment(codesToSend: string[]) {
+    if (!keyFile) throw new Error('Importe la clé .cectkey reçue dans ton kit de démonstration.')
+    const publicKey = await publicPemFromKeyFile(keyFile)
+    const response = await post<KeyResponse>('/superadmin/enroll/finish', {
+      challenge_id: challengeId, codes: codesToSend,
+      public_key_pem: publicKey, key_id: keyFile.key_id,
+    })
+    if (response.key_id !== keyFile.key_id) throw new Error('Identifiant de clé inattendu.')
+    setPendingKey(keyFile)
+    setStage('activate')
   }
 
   async function prepareNewKey(path: string, codesToSend: string[]) {
@@ -115,17 +127,27 @@ export default function SuperadminLoginPage() {
               const data = await post<Challenge>('/superadmin/enroll/start', { emails })
               setChallengeId(data.challenge_id); setCodes(['', '', '']); setStage('enroll-codes')
             })}>
-              <p className="text-sm text-[var(--color-text-muted)]">Enregistrez maintenant les trois boîtes e-mail qui recevront vos codes. Cette étape est obligatoire à la première connexion.</p>
+              <p className="text-sm text-[var(--color-text-muted)]">Configurez vos trois adresses e-mail et sélectionnez la clé .cectkey fournie pour la première connexion.</p>
+              <label className="block space-y-2 text-sm font-semibold">Clé initiale (.cectkey)
+                <input className={input} type="file" accept=".cectkey,application/json" required
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (!file) return
+                    void file.text().then((data) => { setKeyFile(parseKeyFile(data)); setError('') })
+                      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Clé invalide.'))
+                  }} />
+              </label>
               {emails.map((value, i) => <label className="block text-sm font-semibold" key={i}>E-mail {i + 1}
                 <input type="email" autoComplete="off" required className={`${input} mt-1`} value={value} onChange={(e) => updateEmail(i, e.target.value)} />
               </label>)}
-              <button disabled={busy} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">Envoyer trois codes différents</button>
+              <button disabled={busy || !keyFile} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">Envoyer trois codes différents</button>
             </form>
           )}
           {(stage === 'enroll-codes' || stage === 'rotate-codes' || stage === 'recover-codes') && (
-            <form className="space-y-4" onSubmit={(event) => submit(event, () => prepareNewKey(
-              stage === 'enroll-codes' ? '/superadmin/enroll/finish' : stage === 'rotate-codes' ? '/superadmin/rotate/finish' : '/superadmin/recover/finish', codes
-            ))}>
+            <form className="space-y-4" onSubmit={(event) => submit(event, () => stage === 'enroll-codes'
+              ? initialEnrollment(codes)
+              : prepareNewKey(stage === 'rotate-codes' ? '/superadmin/rotate/finish' : '/superadmin/recover/finish', codes)
+            )}>
               <p className="text-sm text-[var(--color-text-muted)]"><MailCheck className="mr-2 inline" size={18} />Trois codes <strong>différents</strong> ont été envoyés. Saisissez les trois pour autoriser la génération d'une nouvelle clé.</p>
               {codes.map((value, i) => <label className="block text-sm font-semibold" key={i}>Code de l'e-mail {i + 1}
                 <input className={`${input} mt-1`} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required value={value} onChange={(e) => updateCode(i, e.target.value)} autoComplete="one-time-code" />
