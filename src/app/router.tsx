@@ -19,6 +19,8 @@ const JournalPage = lazy(() => import('@/pages/admin/JournalPage'))
 const CashbackPage = lazy(() => import('@/pages/admin/CashbackPage'))
 
 const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
+const SUPERADMIN_PATH_MODE = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true'
+const ALLOW_SUPERADMIN_ENTRY = IS_SUPERADMIN_HOST || SUPERADMIN_PATH_MODE
 
 function Loading() {
   return (
@@ -35,7 +37,7 @@ function S({ children }: { children: React.ReactNode }) {
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/admin'} replace /> },
   { path: '/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : <S><LoginPage /></S> },
-  { path: '/superadmin/connexion', element: IS_SUPERADMIN_HOST ? <S><SuperadminLoginPage /></S> : <Navigate to="/connexion" replace /> },
+  { path: '/superadmin/connexion', element: ALLOW_SUPERADMIN_ENTRY ? <S><SuperadminLoginPage /></S> : <Navigate to="/connexion" replace /> },
   { path: '/activation', element: <S><ActivationPage /></S> },
   {
     path: '/admin',
