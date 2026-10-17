@@ -117,6 +117,20 @@ export default function ConfigurationPage() {
           </label>
         </div>
 
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4">
+          <h2 className="text-sm font-bold text-[var(--color-text)]">Gestion des frais d'adhésion</h2>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+            Le Superadmin peut définir les frais des personnes physiques et des personnes morales.
+            Les montants affichés lors de l'inscription proviennent immédiatement de l'API.
+            Chaque changement exige un motif et reste historisé.
+          </p>
+          <button type="button"
+            onClick={() => { setGroup('membership'); setSearch('membership.fee.') }}
+            className="mt-3 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-bold text-white">
+            Accéder aux tarifs d'adhésion
+          </button>
+        </div>
+
         <Panel title="Paramètres" subtitle={`${visible.length} paramètre(s)`} flush>
           {query.isPending && <div className="mx-5 mb-4 h-32 animate-pulse rounded-2xl bg-[var(--chart-track)]" />}
           {query.isError && <p role="alert" className="px-6 pb-4 text-sm">Impossible de charger les paramètres.</p>}
