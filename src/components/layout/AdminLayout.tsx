@@ -31,6 +31,7 @@ const NAV: AdminNavItem[] = [
   { section: 'Gestion', to: '/admin/cashback', label: 'Cashback & pays', icon: BadgePercent, permissions: ['settings.view'] },
   { section: 'Gestion', to: '/admin/equipe', label: 'Équipe & rôles', icon: UserCog, permissions: ['staff.view', 'roles.view'] },
   { section: 'Système', to: '/admin/configuration', label: 'Configuration', icon: Settings, permissions: ['settings.view'] },
+  { section: 'Système', to: '/admin/securite', label: 'Sécurité SuperAdmin', icon: Settings, permissions: ['settings.update_critical'] },
   { section: 'Système', to: '/admin/journal', label: 'Journaux', icon: ScrollText, permissions: ['audit.view', 'security_events.view'] },
   { section: 'Système', to: '/admin/export', label: 'Exports', icon: Download, permissions: ['reports.export', 'reports.view'] },
 ]
@@ -51,7 +52,7 @@ export function AdminLayout() {
 
   const sections = useMemo<NavSection[]>(() => {
     if (!role) return []
-    const visible = NAV.filter((item) => item.permissions.length === 0 || item.permissions.some(can))
+    const visible = NAV.filter((item) => (item.to !== '/admin/securite' || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
     const titles = [...new Set(visible.map((item) => item.section))]
     return titles.map((title) => ({
       title,
