@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { BadgePercent, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
+import { isSuperadminClientMode } from '@/lib/api'
 import { fetchAdminDashboard } from '@/data/adminDashboard'
 import { isAdminRole, type UserRole } from '@/lib/roles'
 import { FullPageLoader } from './FullPageLoader'
@@ -63,7 +64,7 @@ export function AdminLayout() {
   }, [role, pendingCount, can])
 
   if (loading) return <FullPageLoader />
-  if (!user || !isAdminRole(user.role)) return <Navigate to="/connexion" replace state={{ from: location.pathname }} />
+  if (!user || !isAdminRole(user.role)) return <Navigate to={isSuperadminClientMode() ? '/superadmin/connexion' : '/connexion'} replace state={{ from: location.pathname }} />
 
   const current = NAV.filter((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))).sort((a, b) => b.to.length - a.to.length)[0]
 
