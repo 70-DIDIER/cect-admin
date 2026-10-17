@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const SuperadminLoginPage = lazy(() => import('@/pages/SuperadminLoginPage'))
+const SuperadminSecurityPage = lazy(() => import('@/pages/admin/SuperadminSecurityPage'))
 const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const MembresPage = lazy(() => import('@/pages/admin/MembresPage'))
@@ -31,6 +33,7 @@ function S({ children }: { children: React.ReactNode }) {
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/admin" replace /> },
   { path: '/connexion', element: <S><LoginPage /></S> },
+  { path: '/superadmin/connexion', element: <S><SuperadminLoginPage /></S> },
   { path: '/activation', element: <S><ActivationPage /></S> },
   {
     path: '/admin',
@@ -45,6 +48,7 @@ const router = createBrowserRouter([
       { path: 'cashback', element: <S><CashbackPage /></S> },
       { path: 'equipe', element: <S><EquipePage /></S> },
       { path: 'configuration', element: <S><ConfigurationPage /></S> },
+      { path: 'securite', element: <S><SuperadminSecurityPage /></S> },
       { path: 'journal', element: <S><JournalPage /></S> },
       { path: 'export', element: <S><ExportPage /></S> },
     ],
