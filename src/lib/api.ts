@@ -1,6 +1,8 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 
-const ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '')
+// The SuperAdmin subdomain must use its own certificate-verified API entrypoint.
+const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
+const ORIGIN = (IS_SUPERADMIN_HOST ? window.location.origin : (import.meta.env.VITE_API_URL ?? 'http://localhost:8000')).replace(/\/+$/, '')
 
 export class ApiError extends Error {
   constructor(
