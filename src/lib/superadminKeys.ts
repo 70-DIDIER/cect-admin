@@ -32,6 +32,19 @@ export async function createKeyMaterial() {
   return { public_key_pem: `-----BEGIN PUBLIC KEY-----\n${pem}\n-----END PUBLIC KEY-----\n`, private_key_pkcs8: toBase64(privateKey) }
 }
 
+/** Derive the public half locally; never send the user's private key to the API. */
+export async function publicPemFromKeyFile(file: SuperadminKeyFile): Promise<string> {
+  const key = await crypto.subtle.importKey('pkcs8', fromBase64(file.private_key_pkcs8),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, true, ['sign'])
+  const jwk = await crypto.subtle.exportKey('jwk', key)
+  if (!jwk.n || !jwk.e) throw new Error('La clé CECT ne contient pas une clé RSA valide.')
+  const publicKey = await crypto.subtle.importKey('jwk',
+    { kty: 'RSA', n: jwk.n, e: jwk.e, alg: 'RS256', ext: true, key_ops: ['verify'] },
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, true, ['verify'])
+  const spki = toBase64(await crypto.subtle.exportKey('spki', publicKey))
+  return `-----BEGIN PUBLIC KEY-----\n${spki.match(/.{1,64}/g)?.join('\n')}\n-----END PUBLIC KEY-----\n`
+}
+
 export function createKeyFile(keyId: string, privateKey: string): SuperadminKeyFile {
   return { format: 'CECT-SUPERADMIN-KEY', version: 1, key_id: keyId, private_key_pkcs8: privateKey, created_at: new Date().toISOString() }
 }
