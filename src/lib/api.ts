@@ -1,8 +1,21 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 
-// The SuperAdmin subdomain must use its own certificate-verified API entrypoint.
+// On a standalone SuperAdmin hostname, or in the temporary mTLS-guarded path mode,
+// all API and CSRF calls MUST use the same HTTPS origin that verified the client cert.
+// Session storage is a UX routing hint, never an authentication factor.
 const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
-const ORIGIN = (IS_SUPERADMIN_HOST ? window.location.origin : (import.meta.env.VITE_API_URL ?? 'http://localhost:8000')).replace(/\/+$/, '')
+const PATH_MODE_ENABLED = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true'
+const MODE_MARKER = 'cect.superadmin.path-mode'
+if (PATH_MODE_ENABLED && window.location.pathname.startsWith('/superadmin/')) {
+  window.sessionStorage.setItem(MODE_MARKER, '1')
+}
+export function isSuperadminClientMode(): boolean {
+  return IS_SUPERADMIN_HOST || (PATH_MODE_ENABLED && window.sessionStorage.getItem(MODE_MARKER) === '1')
+}
+export function clearSuperadminClientMode(): void {
+  window.sessionStorage.removeItem(MODE_MARKER)
+}
+const ORIGIN = (isSuperadminClientMode() ? window.location.origin : (import.meta.env.VITE_API_URL ?? 'http://localhost:8000')).replace(/\/+$/, '')
 
 export class ApiError extends Error {
   constructor(
