@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { ApiError, get, onSessionExpired, post } from '@/lib/api'
+import { ApiError, clearSuperadminClientMode, get, isSuperadminClientMode, onSessionExpired, post } from '@/lib/api'
 import { primaryRole, type UserRole } from '@/lib/roles'
 
 interface ApiUser {
@@ -169,7 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 401) console.error('Déconnexion côté serveur impossible', error)
     } finally {
+      const wasSuperadmin = isSuperadminClientMode()
       clearSession()
+      clearSuperadminClientMode()
+      if (wasSuperadmin) window.location.assign('/connexion')
     }
   }, [clearSession])
 
