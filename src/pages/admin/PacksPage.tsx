@@ -150,9 +150,9 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
           ? 'Bonus calculé une seule fois sur les YEM du pack, puis réparti sur les périodes.'
           : 'Bonus calculé au moment de chaque rechargement, sans limite mensuelle de quota.',
       },
-      { name: 'cashback_percent', section: 'cashback', label: 'Bonus en % (si activé)', type: 'number',
+      { name: 'cashback_percent', section: 'cashback', showWhen: { name: 'cashback_mode', value: 'yes' }, label: 'Bonus en %', type: 'number',
         initial: String((packBonus?.rate_bps ?? 0) / 100), hint: 'Exemple : 5 signifie 5 YEM offerts pour 100 YEM achetés. Maximum 99,99 %.' },
-      { name: 'cashback_max_yem', section: 'cashback', label: 'Maximum de YEM offerts (facultatif)',
+      { name: 'cashback_max_yem', section: 'cashback', showWhen: { name: 'cashback_mode', value: 'yes' }, label: 'Maximum de YEM offerts (facultatif)',
         initial: packBonus?.max_yem ?? '', hint: plan.family === 'CONSOMMATEUR'
           ? 'Plafond de bonus sur la totalité du pack. Laisser vide pour aucun plafond.'
           : 'Plafond de bonus par rechargement. Laisser vide pour aucun plafond.' },
