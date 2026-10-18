@@ -91,6 +91,9 @@ export default function ConfigurationPage() {
 
   const groups = useMemo(() => [...new Set((query.data ?? []).map((setting) => setting.group))], [query.data])
   const visible = (query.data ?? []).filter((setting) => {
+    // Global cashback is retained only for packs published before per-pack
+    // policies existed. New cashback is edited in the eligible pack wizard.
+    if (setting.key === 'cashback.rules') return false
     if (group !== 'all' && setting.group !== group) return false
     const needle = search.trim().toLowerCase()
     return !needle || setting.key.toLowerCase().includes(needle) || setting.description.toLowerCase().includes(needle)
