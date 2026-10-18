@@ -15,7 +15,6 @@ import { FormDialog, type FormField } from '@/components/ui/FormDialog'
 import { get, getRaw, newIdempotencyKey, post, put } from '@/lib/api'
 import { formatXof, formatYem } from '@/lib/format'
 import { ErrorLine, FIELD, GhostButton, LoadingBlock, PageIntro } from './shared'
-import { CashbackCard } from './CashbackPage'
 
 type Family = 'VENDEUR' | 'CONSOMMATEUR' | 'PERSONNEL' | 'MARCHAND'
 type Status = 'draft' | 'published' | 'suspended' | 'retired' | 'archived'
@@ -299,9 +298,9 @@ export default function PacksPage() {
   const { can, user } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  const section = searchParams.get('section') === 'cashback' ? 'cashback' : searchParams.get('section') === 'conditions' ? 'conditions' : 'formules'
-  const changeSection = (next: 'formules' | 'cashback' | 'conditions') => setSearchParams(next === 'formules' ? {} : { section: next })
-  const [family, setFamily] = useState('')
+  const section = searchParams.get('section') === 'conditions' ? 'conditions' : 'formules'
+  const changeSection = (next: 'formules' | 'conditions') => setSearchParams(next === 'formules' ? {} : { section: next })
+  const [family, setFamily] = useState(() => searchParams.get('family') || (searchParams.get('section') === 'cashback' ? 'CONSOMMATEUR' : ''))
   const [search, setSearch] = useState('')
   const [target, setTarget] = useState<{ plan: Plan; to: Status } | null>(null)
   const [versionTarget, setVersionTarget] = useState<Plan | null>(null)
@@ -339,7 +338,7 @@ export default function PacksPage() {
       <Helmet><title>Gestion des packs — CECT Admin</title></Helmet>
       <div className="space-y-6">
         <PageIntro title="Packs, quotas et avantages"
-          description="Un seul espace pour définir les quatre familles, leurs quotas, le cashback Consommateur/Personnel et les frais d'adhésion. Les anciennes souscriptions conservent leurs conditions."
+          description="Un espace unique : prix du pack, YEM autorisés, durée et cashback directement dans les formules Consommateur et Personnel. Les anciennes souscriptions conservent leurs conditions."
           actions={mayManage && section === 'formules' && (
             <button onClick={() => setCreating(true)} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-bold text-white">
               <Plus size={17}/> Créer une formule
@@ -348,9 +347,8 @@ export default function PacksPage() {
         />
         <nav aria-label="Sections de gestion des packs" className="flex flex-wrap gap-2 rounded-2xl bg-[var(--dash-bg)] p-2">
           {([
-            ['formules', '1. Formules & quotas'],
-            ['cashback', '2. Bonus cashback'],
-            ['conditions', '3. Adhésion & règles'],
+            ['formules', 'Formules, quotas et cashback'],
+            ['conditions', 'Adhésion et règles'],
           ] as const).map(([id, title]) => (
             <button key={id} type="button" aria-current={section === id ? 'page' : undefined}
               onClick={() => changeSection(id)}
@@ -359,15 +357,6 @@ export default function PacksPage() {
             </button>
           ))}
         </nav>
-        {section === 'cashback' && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm">
-              <p className="font-bold">Le cashback fait partie des avantages du pack, pas du prix.</p>
-              <p className="mt-1 text-[var(--color-text-muted)]">Consommateur : bonus calculé à l'achat du pack, puis réparti sur sa durée. Personnel : bonus sur chaque rechargement. Vendeur et Marchand : aucun cashback. Le prix FCFA reste inchangé.</p>
-            </div>
-            <CashbackCard />
-          </div>
-        )}
         {section === 'conditions' && (
           <div className="space-y-5">
             {superadmin && <MembershipFees superadmin={superadmin}/>}
@@ -382,7 +371,7 @@ export default function PacksPage() {
           <>
           <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm">
             <p className="font-bold">Comment configurer une formule ?</p>
-            <p className="mt-1 text-[var(--color-text-muted)]">Choisissez un pack existant → « Paramétrer » → renseignez le prix, les YEM et la durée → enregistrez en brouillon ou publiez. Les conditions avancées sont facultatives. Les nouveaux membres verront uniquement les versions publiées.</p>
+            <p className="mt-1 text-[var(--color-text-muted)]">Choisissez une formule → cliquez sur « Paramétrer » → saisissez le prix et les YEM prévus. Pour Consommateur et Personnel, définissez directement le bonus cashback dans ce même formulaire. Publiez ensuite la nouvelle version pour les prochaines souscriptions.</p>
           </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
