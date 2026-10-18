@@ -30,11 +30,10 @@ const groups = [
   },
   {
     title: 'Packs et fidélisation',
-    description: 'Formules Vendeur, Consommateur, Personnel et Marchand, limites et cashback YEM.',
+    description: 'Formules, quotas et cashback propre à chaque pack Consommateur et Personnel.',
     icon: Package,
     items: [
       { key: 'packs.max_structured_active', label: 'Packs structurés maximum', unit: '' },
-      { key: 'cashback.rules', label: 'Bonus YEM', unit: '' },
     ],
     to: '/admin/packs',
   },
@@ -43,7 +42,7 @@ const groups = [
 const modules = [
   { name: 'Tarifs et politiques', to: '/admin/configuration', description: 'Prix, taux, plafonds, seuils et paramètres critiques', icon: Settings },
   { name: 'Packs et quotas', to: '/admin/packs', description: 'Créer, versionner, publier et suspendre les formules', icon: Package },
-  { name: 'Cashback Consommateur & Personnel', to: '/admin/packs?section=cashback', description: 'Bonus YEM directement dans les packs éligibles', icon: BadgePercent },
+  { name: 'Cashback Consommateur & Personnel', to: '/admin/packs?family=CONSOMMATEUR', description: 'Bonus YEM directement dans les packs éligibles', icon: BadgePercent },
   { name: 'Pays de paiement', to: '/admin/pays', description: 'Pays éligibles et paramètres des versements', icon: CreditCard },
   { name: 'Membres', to: '/admin/membres', description: 'Personnes physiques, morales, droits et statut', icon: Users },
   { name: 'Équipe & rôles', to: '/admin/equipe', description: 'Comptabilité, Administrateur et permissions RBAC', icon: UserCog },
