@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Globe2, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog, ShieldCheck } from 'lucide-react'
+import { CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { isSuperadminClientMode } from '@/lib/api'
 import { fetchAdminDashboard } from '@/data/adminDashboard'
@@ -29,7 +29,6 @@ const NAV: AdminNavItem[] = [
   { section: 'Opérations', to: '/admin/paiements', label: 'Paiements', icon: CreditCard, permissions: ['payments.view'] },
   { section: 'Gestion', to: '/admin/membres', label: 'Membres', icon: Users, permissions: ['members.view'], tab: true },
   { section: 'Gestion', to: '/admin/packs', label: 'Packs, quotas & cashback', icon: Package, permissions: ['packs.view'] },
-  { section: 'Système', to: '/admin/pays', label: 'Pays de paiement', icon: Globe2, permissions: ['settings.view'] },
   { section: 'Gestion', to: '/admin/equipe', label: 'Équipe & rôles', icon: UserCog, permissions: ['staff.view', 'roles.view'] },
   { section: 'Système', to: '/admin/configuration', label: 'Configuration', icon: Settings, permissions: ['settings.view'] },
   { section: 'Système', to: '/admin/securite', label: 'Sécurité SuperAdmin', icon: Settings, permissions: ['settings.update_critical'] },
