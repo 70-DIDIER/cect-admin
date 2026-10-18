@@ -81,9 +81,9 @@ function amount(value?: string | null): string {
 }
 function versionFields(plan: Plan, base: Version | null): FormField[] {
   const fields: FormField[] = [
-    { name: 'price_xof', label: 'Prix du pack / droit d’accès (FCFA)', type: 'number', required: true, initial: String(base?.price_xof ?? 0) },
+    { name: 'price_xof', label: plan.family === 'PERSONNEL' ? 'Coût d’ouverture du pack (FCFA)' : 'Prix payé à la souscription (FCFA)', type: 'number', required: true, initial: String(base?.price_xof ?? 0), hint: plan.family === 'CONSOMMATEUR' ? 'Si vous renseignez la valeur de référence plus bas, le prix sera égal à cette valeur.' : 'Le membre paie ce montant en FCFA pour accéder à la formule.' },
     {
-      name: 'eligible', label: 'Personnes autorisées à souscrire', type: 'select', required: true,
+      name: 'eligible', label: 'Qui peut souscrire ?', type: 'select', required: true,
       initial: plan.family === 'MARCHAND' ? 'legal' : (base?.eligible_person_types?.length === 1 ? base.eligible_person_types[0] : 'both'),
       options: plan.family === 'MARCHAND'
         ? [{ value: 'legal', label: 'Personnes morales uniquement' }]
@@ -93,36 +93,37 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
             { value: 'legal', label: 'Personnes morales uniquement' },
           ],
     },
-    { name: 'min_operation', label: 'Montant minimum d’une opération (YEM, facultatif)', initial: base?.min_operation ?? '' },
-    { name: 'max_operation', label: 'Montant maximum d’une opération (YEM, facultatif)', initial: base?.max_operation ?? '' },
+    { name: 'min_operation', label: 'Minimum par transaction (YEM)', section: 'advanced', hint: 'Laisser vide s’il n’y a pas de minimum.', initial: base?.min_operation ?? '' },
+    { name: 'max_operation', label: 'Maximum par transaction (YEM)', section: 'advanced', hint: 'Doit être inférieur ou égal au quota par période.', initial: base?.max_operation ?? '' },
   ]
   if (plan.family !== 'PERSONNEL') {
     fields.push(
-      { name: 'unit', label: 'Périodicité des quotas', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month' },
-      { name: 'every', label: 'Fréquence (nombre d’unités)', type: 'number', required: true, initial: String(base?.period?.every ?? 1) },
-      { name: 'cycles', label: 'Nombre de cycles du pack', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12) },
-      { name: 'quota_per_period', label: 'YEM autorisés par cycle (facultatif si calcul automatique Consommateur)', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '' },
-      { name: 'cumulative', label: 'Cumuler les quotas non utilisés', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
-      { name: 'end_of_term', label: 'Règle en fin de pack', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
-      { name: 'first_credit_delay_periods', label: 'Délai du premier crédit (nombre de cycles)', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0) },
+      { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month', hint: 'Choisissez mensuelle pour une formule de 12 mensualités.' },
+      { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: '1 = tous les mois si la fréquence choisie est mensuelle.' },
+      { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12), hint: '12 signifie douze distributions ; avec une fréquence mensuelle, le pack dure 12 mois.' },
+      { name: 'quota_per_period', label: 'Nombre de YEM délivrés à chaque période', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '', hint: plan.family === 'CONSOMMATEUR' ? 'Laissez vide si vous utilisez la valeur de référence automatique ci-dessous.' : 'Exemple : 500 YEM distribués chaque mois pendant 12 mois.' },
+      { name: 'cumulative', label: 'Reporter les YEM non utilisés à la période suivante ?', section: 'advanced', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
+      { name: 'end_of_term', label: 'Que deviennent les YEM restants en fin de pack ?', section: 'advanced', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
+      { name: 'first_credit_delay_periods', label: 'Délai avant la première distribution', section: 'advanced', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0), hint: '0 = immédiatement ; 1 = après une période complète.' },
     )
     if (plan.family === 'CONSOMMATEUR') {
       fields.push({
         name: 'reference_value_xof',
-        label: 'Valeur de référence consommateur (FCFA, facultatif)',
+        label: 'Calculer automatiquement les YEM depuis ce montant (FCFA, facultatif)',
+        hint: 'Saisissez un montant pour calculer les YEM achetés, répartis sur la durée, au cours SuperAdmin. Dans ce cas, il devient le prix du pack.',
         type: 'number',
         initial: String(base?.rules?.reference_value_xof ?? ''),
       })
     }
   } else {
     fields.push({
-      name: 'min_topup_xof', label: 'Rechargement minimum (FCFA)', type: 'number',
+      name: 'min_topup_xof', label: 'Rechargement minimum autorisé (FCFA)', type: 'number',
       initial: String(base?.rules?.min_topup_xof ?? 5000),
     })
   }
   fields.push(
-    { name: 'reason', label: 'Motif de cette nouvelle version', type: 'textarea', required: true },
-    { name: 'publish', label: 'Mise en ligne', type: 'select', options: [
+    { name: 'reason', label: 'Pourquoi modifiez-vous cette formule ?', section: 'final', type: 'textarea', required: true, hint: 'Ce motif est conservé dans l’historique. Minimum cinq caractères.' },
+    { name: 'publish', label: 'Que faire de cette nouvelle version ?', section: 'final', type: 'select', options: [
       { value: 'no', label: 'Enregistrer comme brouillon' },
       { value: 'yes', label: 'Publier pour les prochains souscripteurs' },
     ] },
@@ -151,15 +152,11 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
       if (reference) {
         rules.reference_value_xof = Number(reference)
         rules.rate_setting_key = 'rates.sale_xof_per_yem'
-        // The backend derives the quota and freezes the sale rate when the
-        // reference changes; don't reuse the previous version's old quota.
-        if (reference !== String(base?.rules?.reference_value_xof ?? '')) {
-          // A reference-based pack is bought at the full reference amount.
-          payload.price_xof = Number(reference)
-          delete payload.quota_per_period
-        } else {
-          payload.quota_per_period = values.quota_per_period
-        }
+        // Reference mode is exclusive: Laravel always derives the quota
+        // from the paid amount, current sale rate and number of periods.
+        // Never reuse a previous explicit quota with a reference amount.
+        payload.price_xof = Number(reference)
+        delete payload.quota_per_period
       } else {
         delete rules.reference_value_xof
         delete rules.rate_xof_per_yem
@@ -538,8 +535,9 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
     </div>
   )
   return (
-    <FormDialog title={'Paramétrer ' + plan.code} subtitle="Prix, quotas, éligibilité et conditions. La version précédente reste intacte."
-      submitLabel="Créer cette version" fields={versionFields(plan, base)} onClose={close}
+    <FormDialog title={'Paramétrer ' + plan.name}
+      subtitle={`Formule ${plan.code} · ${FAMILIES[plan.family].label}. Configurez les droits des futurs souscripteurs sans modifier les contrats passés.`}
+      submitLabel="Enregistrer les nouvelles conditions" guided fields={versionFields(plan, base)} onClose={close}
       onSubmit={async values => {
         const payload = versionPayload(plan, values, base)
         const created = await post<Version>('/admin/packs/plans/' + plan.id + '/versions', payload, newIdempotencyKey())
@@ -551,7 +549,33 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
         }
         await changed()
       }}
-    />
+    >
+      {(values) => {
+        const cycles = Number(values.cycles || 0)
+        const quota = Number(values.quota_per_period || 0)
+        const isReference = plan.family === 'CONSOMMATEUR' && Number(values.reference_value_xof) > 0
+        const reference = Number(values.reference_value_xof || 0)
+        const total = cycles > 0 && quota > 0 ? cycles * quota : null
+        return (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--dash-bg)] p-4 text-sm">
+            <p className="font-bold">Comprendre cette formule</p>
+            <p className="mt-1 text-[var(--color-text-muted)]">
+              {plan.family === 'VENDEUR' && 'Le vendeur peut céder à la CECT la quantité de YEM prévue à chaque période. Aucun cashback.'}
+              {plan.family === 'CONSOMMATEUR' && 'Le consommateur achète un pack au prix indiqué, reçoit des YEM répartis sur sa durée et peut obtenir un bonus YEM si le cashback est activé.'}
+              {plan.family === 'PERSONNEL' && 'Le membre ouvre un compte rechargeable. Aucun quota ni durée fixes ; le cashback éventuel intervient sur ses rechargements.'}
+              {plan.family === 'MARCHAND' && 'Le marchand (personne morale) dispose de droits pour accepter puis céder ses YEM à la coopérative. Aucun cashback.'}
+            </p>
+            {plan.family !== 'PERSONNEL' && (
+              <p className="mt-2 font-semibold">
+                {isReference ? `Montant : ${formatXof(reference)} ; les YEM par période seront calculés par le backend.` :
+                  cycles > 0 && total !== null ? `${cycles} distributions × ${quota} YEM = ${total.toLocaleString('fr-FR')} YEM sur la durée.` :
+                  'Renseignez le quota par période et la durée pour voir le total de YEM.'}
+              </p>
+            )}
+          </div>
+        )
+      }}
+    </FormDialog>
   )
 }
 function Row({ label, value }: { label: string; value: string }) {
