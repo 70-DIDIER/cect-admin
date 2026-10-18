@@ -48,9 +48,6 @@ interface Plan {
   versions?: Version[]
 }
 interface Setting { key: string; current_value: number; edit_level: string }
-interface SettingDetail extends Setting {
-  versions: { id: string; value: number; reason: string; effective_from: string; created_at: string }[]
-}
 const FAMILIES: Record<Family, { label: string; tone: Tone; hint: string }> = {
   VENDEUR: { label: 'Vendeur', tone: 'gold', hint: 'Cession de YEM à la CECT · quotas mensuels' },
   CONSOMMATEUR: { label: 'Consommateur', tone: 'primary', hint: 'Achats YEM et consommation chez les marchands' },
@@ -157,6 +154,8 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
         // The backend derives the quota and freezes the sale rate when the
         // reference changes; don't reuse the previous version's old quota.
         if (reference !== String(base?.rules?.reference_value_xof ?? '')) {
+          // A reference-based pack is bought at the full reference amount.
+          payload.price_xof = Number(reference)
           delete payload.quota_per_period
         } else {
           payload.quota_per_period = values.quota_per_period
