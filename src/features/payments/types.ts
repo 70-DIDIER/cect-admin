@@ -33,7 +33,7 @@ export function usePaymentMethods(): ReadonlyArray<{ code: string; label: string
   return config.payment_methods.filter((method) => OFFERED_METHOD_CODES.includes(method.code)).map((method) => ({
     code: method.code,
     label: method.label,
-    hint: method.channel === 'mobile_money' ? 'Paiement mobile' : 'Validé par un validateur après réception',
+    hint: method.channel === 'mobile_money' ? 'Paiement mobile' : 'Validé par la Comptabilité après réception',
   }))
 }
 
