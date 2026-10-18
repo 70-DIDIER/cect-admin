@@ -203,7 +203,7 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
         throw new Error('Le bonus doit être supérieur à 0 % et inférieur ou égal à 99,99 %.')
       }
       const cap = values.cashback_max_yem?.trim() || null
-      if (enabled && cap !== null && !/^\\d{1,22}(\\.\\d{1,6})?$/.test(cap)) {
+      if (enabled && cap !== null && !/^\d{1,22}(\.\d{1,6})?$/.test(cap)) {
         throw new Error('Le plafond YEM doit être positif, avec au maximum 6 décimales.')
       }
       rules.cashback = {
