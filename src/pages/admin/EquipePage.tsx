@@ -54,6 +54,7 @@ function Staff({ roles }: { roles: Role[] }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['staff'] })
   const manage = can('staff.manage')
   const label = (name: string) => roles.find((role) => role.name === name)?.label ?? name
+  const assignableRoles = roles.filter((role) => role.name !== 'superadmin' && role.name !== 'validateur')
 
   return (
     <>
@@ -107,12 +108,12 @@ function Staff({ roles }: { roles: Role[] }) {
         </ul>
       </Panel>
 
-      {creating && <CreateStaff roles={roles} onClose={() => setCreating(false)} onDone={refresh} />}
+      {creating && <CreateStaff roles={assignableRoles} onClose={() => setCreating(false)} onDone={refresh} />}
       {editing && (
         <CheckListDialog
           title="Rôles du compte"
           subtitle={`${editing.first_name} ${editing.last_name}`}
-          items={roles.map((role) => ({ value: role.name, label: role.label ?? role.name, hint: `${role.permissions.includes('*') ? 'Tous les droits' : `${role.permissions.length} droit(s)`}` }))}
+          items={assignableRoles.map((role) => ({ value: role.name, label: role.label ?? role.name, hint: `${role.permissions.includes('*') ? 'Tous les droits' : `${role.permissions.length} droit(s)`}` }))}
           initial={editing.roles}
           submitLabel="Enregistrer les rôles"
           onClose={() => setEditing(null)}
