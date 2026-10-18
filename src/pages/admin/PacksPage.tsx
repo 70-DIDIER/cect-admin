@@ -502,7 +502,7 @@ export default function PacksPage() {
                   {mayManage && (
                     <GhostButton onClick={() => setDuplicating(plan)}><Copy size={14}/> Dupliquer</GhostButton>
                   )}
-                  {mayManage && plan.status !== 'archived' && (
+                  {superadmin && plan.status !== 'archived' && (
                     <GhostButton onClick={() => setRemoving(plan)}><Archive size={14}/> Supprimer / retirer</GhostButton>
                   )}
                   {mayManage && plan.status === 'published' && <GhostButton onClick={() => setTarget({ plan, to: 'suspended' })}><CirclePause size={14}/> Suspendre</GhostButton>}
