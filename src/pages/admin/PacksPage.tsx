@@ -76,6 +76,17 @@ const FEES = [
   { key: 'membership.fee.legal_person', label: 'Adhésion personne morale', short: 'PM' },
 ] as const
 
+type BonusTerms = { enabled?: boolean; rate_bps?: number; max_yem?: string | null; rounding?: string }
+function packBonus(version?: Version | null): BonusTerms | null {
+  const value = version?.rules?.cashback
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as BonusTerms : null
+}
+function describeBonus(version?: Version | null): string {
+  const terms = packBonus(version)
+  if (!terms) return 'Règle historique'
+  return terms.enabled ? `${((terms.rate_bps ?? 0) / 100).toLocaleString('fr-FR')} % de YEM bonus` : 'Sans cashback'
+}
+
 function amount(value?: string | null): string {
   return value == null ? 'À définir' : formatYem(value)
 }
@@ -101,7 +112,7 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
       { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month', hint: 'Choisissez mensuelle pour une formule de 12 mensualités.' },
       { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: '1 = tous les mois si la fréquence choisie est mensuelle.' },
       { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12), hint: '12 signifie douze distributions ; avec une fréquence mensuelle, le pack dure 12 mois.' },
-      { name: 'quota_per_period', label: 'Nombre de YEM délivrés à chaque période', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '', hint: plan.family === 'CONSOMMATEUR' ? 'Laissez vide si vous utilisez la valeur de référence automatique ci-dessous.' : 'Exemple : 500 YEM distribués chaque mois pendant 12 mois.' },
+      { name: 'quota_per_period', label: plan.family === 'VENDEUR' ? 'Quota de vente autorisé (YEM par période)' : plan.family === 'MARCHAND' ? 'Plafond YEM par période' : 'YEM reçus à chaque période', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '', hint: plan.family === 'CONSOMMATEUR' ? 'Laissez vide si vous utilisez la valeur de référence automatique ci-dessous.' : 'Exemple : 500 YEM distribués chaque mois pendant 12 mois.' },
       { name: 'cumulative', label: 'Reporter les YEM non utilisés à la période suivante ?', section: 'advanced', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
       { name: 'end_of_term', label: 'Que deviennent les YEM restants en fin de pack ?', section: 'advanced', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
       { name: 'first_credit_delay_periods', label: 'Délai avant la première distribution', section: 'advanced', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0), hint: '0 = immédiatement ; 1 = après une période complète.' },
@@ -272,6 +283,7 @@ function VersionHistory({ plan, close, changed, manage }: { plan: Plan; close: (
                 <p>Cumul : {version.cumulative == null ? 'Sans objet' : version.cumulative ? 'Oui' : 'Non'}</p>
                 <p>Min / max : {version.min_operation ?? '—'} / {version.max_operation ?? '—'} YEM</p>
                 <p>Création : {new Date(version.created_at).toLocaleString('fr-FR')}</p>
+                {(plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') && <p>Cashback : {describeBonus(version)}</p>}
               </div>
               {version.reason && <p className="mt-2 text-xs text-[var(--color-text-muted)]">Motif : {version.reason}</p>}
               {!version.published_at && manage && plan.status !== 'archived' && plan.status !== 'retired' && (
@@ -468,6 +480,9 @@ export default function PacksPage() {
                   <Row label="Cycles" value={v?.period ? v.period.cycles + ' × ' + v.period.every + ' ' + v.period.unit : 'À définir'}/>
                   <Row label="Cumul" value={v?.cumulative == null ? '—' : v.cumulative ? 'Oui' : 'Non'}/>
                   <Row label="Admissibilité" value={v?.eligible_person_types?.map(t => t === 'natural' ? 'PF' : 'PM').join(' / ') ?? (plan.family === 'MARCHAND' ? 'PM' : 'À définir')}/>
+                  {(plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') &&
+                    <Row label="YEM bonus" value={describeBonus(v)}/>}
+
                   <Row label="Bonus cashback YEM" value={
                     plan.family === 'VENDEUR' || plan.family === 'MARCHAND'
                       ? 'Jamais applicable'
