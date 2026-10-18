@@ -1,12 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock, Pencil, Search } from 'lucide-react'
+import { History, Lock, Pencil, Search, X } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { Panel } from '@/components/dashboard/Panel'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { FormDialog, type FormField } from '@/components/ui/FormDialog'
 import { newIdempotencyKey, put, get } from '@/lib/api'
+
+interface SettingVersion {
+  id: string
+  value: unknown
+  effective_from: string
+  created_at: string
+  reason: string | null
+  created_by: string | null
+}
+
+interface SettingDetail extends Setting {
+  versions: SettingVersion[]
+}
 
 interface Setting {
   key: string
@@ -73,6 +86,7 @@ export default function ConfigurationPage() {
   const [group, setGroup] = useState<string>(() => new URLSearchParams(window.location.search).get('group') || 'all')
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') || '')
   const [editing, setEditing] = useState<Setting | null>(null)
+  const [history, setHistory] = useState<Setting | null>(null)
   const query = useQuery({ queryKey: ['settings'], queryFn: () => get<Setting[]>('/admin/settings'), staleTime: 0 })
 
   const groups = useMemo(() => [...new Set((query.data ?? []).map((setting) => setting.group))], [query.data])
@@ -145,6 +159,9 @@ export default function ConfigurationPage() {
                   <p className="mt-1 text-xs text-[var(--color-text-muted)]">{setting.description}</p>
                 </div>
                 <p className="max-w-xs break-words text-right text-sm font-semibold text-[var(--color-text)]">{displayValue(setting)}</p>
+                <button type="button" onClick={() => setHistory(setting)} aria-label={`Historique de ${setting.key}`} title="Historique des versions" className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] hover:bg-[var(--dash-bg)]">
+                  <History size={16} aria-hidden />
+                </button>
                 {canEdit(setting) && (
                   <button type="button" onClick={() => setEditing(setting)} aria-label={`Modifier ${setting.key}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] hover:bg-[var(--dash-bg)]">
                     <Pencil size={15} aria-hidden />
@@ -156,6 +173,7 @@ export default function ConfigurationPage() {
         </Panel>
       </div>
 
+      {history && <SettingHistory setting={history} onClose={() => setHistory(null)} />}
       {editing && (
         <SettingDialog
           setting={editing}
@@ -194,5 +212,44 @@ function SettingDialog({ setting, onClose, onSaved }: { setting: Setting; onClos
     >
       <p className="text-sm text-[var(--color-text-muted)]">{setting.description}</p>
     </FormDialog>
+  )
+}
+
+function SettingHistory({ setting, onClose }: { setting: Setting; onClose: () => void }) {
+  const query = useQuery({
+    queryKey: ['setting-history', setting.key],
+    queryFn: () => get<SettingDetail>(`/admin/settings/${setting.key}`),
+    staleTime: 0,
+  })
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Historique de ${setting.key}`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
+      <section className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl" onClick={event => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold">Historique des paramètres</h2>
+            <p className="mt-1 break-all text-xs text-[var(--color-text-muted)]">{setting.key}</p>
+          </div>
+          <button type="button" aria-label="Fermer" onClick={onClose} className="rounded-xl border border-[var(--color-border)] p-2"><X size={18}/></button>
+        </div>
+        {query.isPending && <p className="mt-5 text-sm">Chargement des versions…</p>}
+        {query.isError && <p role="alert" className="mt-5 text-sm">Impossible de lire cet historique.</p>}
+        {query.data && (
+          <ol className="mt-5 divide-y divide-[var(--color-border)]">
+            {query.data.versions.length === 0 && <li className="py-4 text-sm text-[var(--color-text-muted)]">Aucune modification enregistrée.</li>}
+            {query.data.versions.map((version) => (
+              <li key={version.id} className="space-y-2 py-4 text-sm">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <strong>{new Date(version.effective_from).toLocaleString('fr-FR')}</strong>
+                  <span className="text-xs text-[var(--color-text-muted)]">Version du {new Date(version.created_at).toLocaleString('fr-FR')}</span>
+                </div>
+                <p className="break-words"><strong>Valeur : </strong>{setting.is_sensitive ? 'Valeur confidentielle masquée' : typeof version.value === 'object' ? JSON.stringify(version.value) : String(version.value ?? 'Non défini')}</p>
+                <p className="break-words text-[var(--color-text-muted)]"><strong>Motif : </strong>{version.reason || 'Création initiale'}</p>
+                {version.created_by && <p className="text-xs text-[var(--color-text-muted)]">Auteur (référence interne) : {version.created_by}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
   )
 }
