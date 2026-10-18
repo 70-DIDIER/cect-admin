@@ -70,8 +70,8 @@ function parseValue(setting: Setting, raw: string): unknown {
 export default function ConfigurationPage() {
   const { can } = useAuth()
   const queryClient = useQueryClient()
-  const [group, setGroup] = useState<string>('all')
-  const [search, setSearch] = useState('')
+  const [group, setGroup] = useState<string>(() => new URLSearchParams(window.location.search).get('group') || 'all')
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') || '')
   const [editing, setEditing] = useState<Setting | null>(null)
   const query = useQuery({ queryKey: ['settings'], queryFn: () => get<Setting[]>('/admin/settings'), staleTime: 0 })
 
