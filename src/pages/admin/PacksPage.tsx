@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Archive, CircleCheck, CirclePause, Copy, FileClock, FilePlus2,
-  Pencil, Plus, Search, ShieldCheck, SlidersHorizontal, X,
+  Pencil, Plus, Search, ShieldCheck, X,
 } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { Panel } from '@/components/dashboard/Panel'
