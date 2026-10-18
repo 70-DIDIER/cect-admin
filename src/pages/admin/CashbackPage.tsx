@@ -34,8 +34,6 @@ interface SettingDetail<T> {
 const FAMILIES = [
   { value: 'CONSOMMATEUR', label: 'Consommateur' },
   { value: 'PERSONNEL', label: 'Personnel' },
-  { value: 'VENDEUR', label: 'Vendeur' },
-  { value: 'MARCHAND', label: 'Marchand' },
 ]
 
 function useSetting<T>(key: string) {
@@ -96,10 +94,11 @@ function Meta({ reason, setReason, from, setFrom }: { reason: string; setReason:
   )
 }
 
-function CashbackCard() {
+export function CashbackCard() {
   const { can } = useAuth()
   const query = useSetting<CashbackRules>('cashback.rules')
   const saver = useSaver('cashback.rules')
+  const saleRate = useSetting<number>('rates.sale_xof_per_yem')
   const [rules, setRules] = useState<CashbackRules | null>(null)
   const [percent, setPercent] = useState('0')
   const [reason, setReason] = useState('')
@@ -116,20 +115,22 @@ function CashbackCard() {
   if (query.isError) return <Panel title="Cashback en YEM"><ErrorLine message="Impossible de charger la règle." /></Panel>
 
   const rate = Math.max(0, Math.min(99.99, Number.parseFloat(percent) || 0))
-  const example = (300000 / 650) * (rate / 100)
+  const unitRate = saleRate.data?.current_value ?? 0
+  const baseYem = unitRate > 0 ? 300000 / unitRate : null
+  const example = baseYem === null ? null : Math.min(baseYem * (rate / 100), rules.max_yem !== null ? Number(rules.max_yem) : Infinity)
   const canEdit = can('settings.update_critical')
   const update = (patch: Partial<CashbackRules>) => setRules({ ...rules, ...patch })
 
   return (
     <Panel
       title="Cashback en YEM"
-      subtitle="Le membre paie le prix plein et reçoit un bonus en YEM, calculé et figé à l’achat."
+      subtitle="Uniquement pour les packs Consommateur et les rechargements Personnel. Le membre paie le montant intégral ; son bonus est crédité en YEM."
       action={<StatusBadge label={rules.enabled ? 'Activé' : 'Désactivé'} tone={rules.enabled ? 'success' : 'neutral'} icon={BadgePercent} />}
     >
       <div className="grid gap-5 md:grid-cols-2">
         <label className="flex min-h-[44px] items-center gap-3 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold md:col-span-2">
           <input type="checkbox" className="h-4 w-4 accent-[var(--color-primary)]" checked={rules.enabled} disabled={!canEdit} onChange={(event) => update({ enabled: event.target.checked })} />
-          Activer le cashback sur les nouveaux achats
+          Activer le cashback sur les nouveaux achats Consommateur et rechargements Personnel
         </label>
 
         <label className="block text-sm">
@@ -142,7 +143,7 @@ function CashbackCard() {
         </label>
 
         <fieldset className="text-sm">
-          <legend className="mb-1.5 font-medium">Familles éligibles</legend>
+          <legend className="mb-1.5 font-medium">Appliquer le bonus à</legend>
           <div className="flex flex-wrap gap-2">
             {FAMILIES.map((family) => {
               const checked = rules.families.includes(family.value)
@@ -154,6 +155,7 @@ function CashbackCard() {
               )
             })}
           </div>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">Vendeur et Marchand ne bénéficient jamais de cashback.</p>
         </fieldset>
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium">Arrondi</span>
@@ -167,14 +169,16 @@ function CashbackCard() {
       <div className="mt-5 rounded-2xl bg-[var(--tone-success-bg)] p-4 text-sm text-[var(--tone-success-fg)]">
         <p className="font-bold">Simulation</p>
         <p className="mt-1">
-          Un achat de 300 000 FCFA à 650 FCFA/YEM donne ≈ {(300000 / 650).toFixed(2)} YEM, plus <strong>{example.toFixed(2)} YEM</strong> de cashback à {rate} %.
+          {baseYem === null || example === null
+            ? 'Impossible de simuler sans le cours YEM défini par le SuperAdmin.'
+            : <>Pour un achat Consommateur de 300 000 FCFA au cours de {unitRate} FCFA/YEM : <strong>{baseYem.toFixed(2)} YEM achetés</strong>, plus <strong>{rules.enabled && rules.families.includes('CONSOMMATEUR') ? example.toFixed(2) : '0.00'} YEM de cashback</strong>. Aucun rabais sur le paiement. Le même taux s'applique à un rechargement Personnel si cette famille est activée.</>}
         </p>
       </div>
 
       {canEdit ? (
         <>
           <Meta reason={reason} setReason={setReason} from={from} setFrom={setFrom} />
-          <SaveBar busy={saver.busy} error={saver.error} done={saver.done} disabled={reason.trim().length < 5} onSave={() => void saver.save({ ...rules, rate_bps: Math.round(rate * 100) }, reason, from)} />
+          <SaveBar busy={saver.busy} error={saver.error} done={saver.done} disabled={reason.trim().length < 5 || !Number.isFinite(rate) || (rules.max_yem !== null && (!Number.isFinite(Number(rules.max_yem)) || Number(rules.max_yem) < 0))} onSave={() => void saver.save({ ...rules, families: rules.families.filter(f => f === 'CONSOMMATEUR' || f === 'PERSONNEL'), rate_bps: Math.round(rate * 100) }, reason, from)} />
         </>
       ) : (
         <p className="mt-5 text-sm text-[var(--color-text-muted)]">Seul le Super-administrateur peut modifier cette règle.</p>
@@ -247,15 +251,12 @@ function CountriesCard() {
   )
 }
 
-export default function CashbackPage() {
+export default function CountriesPage() {
   return (
     <>
-      <Helmet>
-        <title>Cashback & pays — CECT Admin</title>
-      </Helmet>
+      <Helmet><title>Pays de paiement — CECT Admin</title></Helmet>
       <div className="space-y-6">
-        <PageIntro title="Cashback & pays de réception" description="Règles commerciales pilotées par le Super-administrateur. Chaque enregistrement crée une version datée ; les achats déjà passés ne sont jamais recalculés." />
-        <CashbackCard />
+        <PageIntro title="Pays de paiement et de versement" description="Gérez ici les pays et les numéros de réception de fonds. Le cashback commercial est désormais intégré à la gestion des packs." />
         <CountriesCard />
       </div>
     </>
