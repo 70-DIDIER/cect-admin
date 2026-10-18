@@ -27,7 +27,7 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       () =>
         new Promise<void>((resolve, reject) => {
           settle.current = { resolve, reject }
-          (isSuperadminClientMode()
+          ;(isSuperadminClientMode()
             ? post<{ challenge_id: string }>('/superadmin/step-up/start').then(result => ({
                 challenge_id: result.challenge_id,
                 sent_to: 'vos trois adresses SuperAdmin vérifiées',
