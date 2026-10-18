@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ShieldCheck, X } from 'lucide-react'
-import { ApiError, post, setStepUpHandler } from '@/lib/api'
+import { ApiError, isSuperadminClientMode, post, setStepUpHandler } from '@/lib/api'
 import { CodeForm } from './CodeForm'
 import { authErrorMessage } from './errors'
 
@@ -27,7 +27,13 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
       () =>
         new Promise<void>((resolve, reject) => {
           settle.current = { resolve, reject }
-          post<Challenge>('/auth/step-up').then(setChallenge, (error: unknown) => {
+          (isSuperadminClientMode()
+            ? post<{ challenge_id: string }>('/superadmin/step-up/start').then(result => ({
+                challenge_id: result.challenge_id,
+                sent_to: 'vos trois adresses SuperAdmin vérifiées',
+              }))
+            : post<Challenge>('/auth/step-up')
+          ).then(setChallenge, (error: unknown) => {
             setStartError(authErrorMessage(error))
             reject(error)
           })
@@ -59,13 +65,20 @@ export function StepUpProvider({ children }: { children: ReactNode }) {
               <CodeForm
                 sentTo={challenge.sent_to}
                 onVerify={async (code) => {
-                  await post('/auth/step-up/verify', { challenge_id: challenge.challenge_id, code })
+                  await post(isSuperadminClientMode() ? '/superadmin/step-up/verify' : '/auth/step-up/verify', { challenge_id: challenge.challenge_id, code })
                   const pending = settle.current
                   setChallenge(null)
                   settle.current = null
                   pending?.resolve()
                 }}
-                onResend={async () => setChallenge(await post<Challenge>('/auth/otp/resend', { challenge_id: challenge.challenge_id }))}
+                onResend={async () => {
+                  if (isSuperadminClientMode()) {
+                    const updated = await post<{ challenge_id: string }>('/superadmin/step-up/start')
+                    setChallenge({ challenge_id: updated.challenge_id, sent_to: 'vos trois adresses SuperAdmin vérifiées' })
+                  } else {
+                    setChallenge(await post<Challenge>('/auth/otp/resend', { challenge_id: challenge.challenge_id }))
+                  }
+                }}
               />
             )}
           </Dialog.Content>
