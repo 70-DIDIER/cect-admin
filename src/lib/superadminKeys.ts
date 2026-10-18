@@ -50,8 +50,13 @@ export function createKeyFile(keyId: string, privateKey: string): SuperadminKeyF
 }
 
 export function parseKeyFile(text: string): SuperadminKeyFile {
-  const parsed: unknown = JSON.parse(text)
-  if (!parsed || typeof parsed !== 'object') throw new Error('Fichier de clé invalide.')
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('Fichier incorrect : sélectionnez votre clé personnelle .cectkey, pas le certificat .crt ni le fichier .p12.')
+  }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Ce fichier n’est pas une clé CECT valide. Utilisez le fichier .cectkey de votre kit.')
   const key = parsed as Partial<SuperadminKeyFile>
   if (key.format !== 'CECT-SUPERADMIN-KEY' || key.version !== 1 ||
       typeof key.key_id !== 'string' || !/^[a-f0-9-]{36}$/i.test(key.key_id) ||
