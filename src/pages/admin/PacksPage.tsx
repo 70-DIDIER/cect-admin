@@ -101,7 +101,7 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
       { name: 'unit', label: 'Périodicité des quotas', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month' },
       { name: 'every', label: 'Fréquence (nombre d’unités)', type: 'number', required: true, initial: String(base?.period?.every ?? 1) },
       { name: 'cycles', label: 'Nombre de cycles du pack', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12) },
-      { name: 'quota_per_period', label: 'YEM autorisés par cycle', required: true, initial: base?.quota_per_period ?? '' },
+      { name: 'quota_per_period', label: 'YEM autorisés par cycle (facultatif si calcul automatique Consommateur)', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '' },
       { name: 'cumulative', label: 'Cumuler les quotas non utilisés', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
       { name: 'end_of_term', label: 'Règle en fin de pack', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
       { name: 'first_credit_delay_periods', label: 'Délai du premier crédit (nombre de cycles)', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0) },
