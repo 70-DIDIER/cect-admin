@@ -5,6 +5,7 @@ import { AdminLayout } from '@/components/layout/AdminLayout'
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const SuperadminLoginPage = lazy(() => import('@/pages/SuperadminLoginPage'))
 const SuperadminSecurityPage = lazy(() => import('@/pages/admin/SuperadminSecurityPage'))
+const SuperadminGovernancePage = lazy(() => import('@/pages/admin/SuperadminGovernancePage'))
 const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const MembresPage = lazy(() => import('@/pages/admin/MembresPage'))
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
       { path: 'equipe', element: <S><EquipePage /></S> },
       { path: 'configuration', element: <S><ConfigurationPage /></S> },
       { path: 'securite', element: <S><SuperadminSecurityPage /></S> },
+      { path: 'gouvernance', element: <S><SuperadminGovernancePage /></S> },
       { path: 'journal', element: <S><JournalPage /></S> },
       { path: 'export', element: <S><ExportPage /></S> },
     ],
