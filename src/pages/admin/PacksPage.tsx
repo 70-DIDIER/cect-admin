@@ -144,7 +144,7 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
           ? 'Bonus calculé une seule fois sur les YEM du pack, puis réparti sur les périodes.'
           : 'Bonus calculé au moment de chaque rechargement, sans limite mensuelle de quota.',
       },
-      { name: 'cashback_percent', section: 'cashback', showWhen: { name: 'cashback_mode', value: 'yes' }, label: 'Bonus en %', type: 'number',
+      { name: 'cashback_percent', section: 'cashback', showWhen: { name: 'cashback_mode', value: 'yes' }, label: 'Bonus en %', type: 'number', step: '0.01',
         initial: String((packBonus?.rate_bps ?? 0) / 100), hint: 'Exemple : 5 signifie 5 YEM offerts pour 100 YEM achetés. Maximum 99,99 %.' },
       { name: 'cashback_max_yem', section: 'cashback', showWhen: { name: 'cashback_mode', value: 'yes' }, label: 'Maximum de YEM offerts (facultatif)',
         initial: packBonus?.max_yem ?? '', hint: plan.family === 'CONSOMMATEUR'
@@ -638,8 +638,8 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
       {(values) => {
         const cycles = Number(values.cycles || 0)
         const quota = Number(values.quota_per_period || 0)
-        const isReference = plan.family === 'CONSOMMATEUR' && Number(values.reference_value_xof) > 0
-        const reference = Number(values.reference_value_xof || 0)
+        const isReference = plan.family === 'CONSOMMATEUR'
+        const reference = Number(values.price_xof || 0)
         const unitRate = saleRate.data?.current_value ?? 0
         const purchaseYem = isReference && unitRate > 0 && cycles > 0 ? reference / (unitRate * cycles) : quota
         const total = cycles > 0 && purchaseYem > 0 ? cycles * purchaseYem : null
