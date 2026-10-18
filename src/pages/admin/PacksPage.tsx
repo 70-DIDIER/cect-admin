@@ -112,20 +112,14 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
       { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month', hint: 'Choisissez mensuelle pour une formule de 12 mensualités.' },
       { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: '1 = tous les mois si la fréquence choisie est mensuelle.' },
       { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12), hint: '12 signifie douze distributions ; avec une fréquence mensuelle, le pack dure 12 mois.' },
-      { name: 'quota_per_period', label: plan.family === 'VENDEUR' ? 'Quota de vente autorisé (YEM par période)' : plan.family === 'MARCHAND' ? 'Plafond YEM par période' : 'YEM reçus à chaque période', required: plan.family !== 'CONSOMMATEUR', initial: base?.quota_per_period ?? '', hint: plan.family === 'CONSOMMATEUR' ? 'Laissez vide si vous utilisez la valeur de référence automatique ci-dessous.' : 'Exemple : 500 YEM distribués chaque mois pendant 12 mois.' },
+      ...(plan.family === 'CONSOMMATEUR' ? [] : [{
+        name: 'quota_per_period', label: plan.family === 'VENDEUR' ? 'Quota de vente autorisé (YEM par période)' : 'Plafond YEM par période',
+        required: true, initial: base?.quota_per_period ?? '', hint: 'Exemple : 500 YEM autorisés chaque mois pendant 12 mois.',
+      }]),
       { name: 'cumulative', label: 'Reporter les YEM non utilisés à la période suivante ?', section: 'advanced', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
       { name: 'end_of_term', label: 'Que deviennent les YEM restants en fin de pack ?', section: 'advanced', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
       { name: 'first_credit_delay_periods', label: 'Délai avant la première distribution', section: 'advanced', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0), hint: '0 = immédiatement ; 1 = après une période complète.' },
     )
-    if (plan.family === 'CONSOMMATEUR') {
-      fields.push({
-        name: 'reference_value_xof',
-        label: 'Calculer automatiquement les YEM depuis ce montant (FCFA, facultatif)',
-        hint: 'Saisissez un montant pour calculer les YEM achetés, répartis sur la durée, au cours SuperAdmin. Dans ce cas, il devient le prix du pack.',
-        type: 'number',
-        initial: String(base?.rules?.reference_value_xof ?? ''),
-      })
-    }
   } else {
     fields.push({
       name: 'min_topup_xof', label: 'Rechargement minimum autorisé (FCFA)', type: 'number',
@@ -185,20 +179,13 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
     payload.end_of_term = values.end_of_term
     rules.first_credit_delay_periods = Number(values.first_credit_delay_periods || 0)
     if (plan.family === 'CONSOMMATEUR') {
-      const reference = values.reference_value_xof?.trim()
-      if (reference) {
-        rules.reference_value_xof = Number(reference)
-        rules.rate_setting_key = 'rates.sale_xof_per_yem'
-        // Reference mode is exclusive: Laravel always derives the quota
-        // from the paid amount, current sale rate and number of periods.
-        // Never reuse a previous explicit quota with a reference amount.
-        payload.price_xof = Number(reference)
-        delete payload.quota_per_period
-      } else {
-        delete rules.reference_value_xof
-        delete rules.rate_xof_per_yem
-        payload.quota_per_period = values.quota_per_period
-      }
+      if (price <= 0) throw new Error('Le prix du pack Consommateur doit être supérieur à zéro.')
+      // One FCFA amount is the source of truth. The API snapshots its YEM
+      // sale rate and derives periodic allowances; no duplicate amount field.
+      rules.reference_value_xof = price
+      rules.rate_setting_key = 'rates.sale_xof_per_yem'
+      delete rules.rate_xof_per_yem
+      delete payload.quota_per_period
     } else {
       payload.quota_per_period = values.quota_per_period
     }
