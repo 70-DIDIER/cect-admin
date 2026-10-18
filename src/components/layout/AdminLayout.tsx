@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BadgePercent, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog } from 'lucide-react'
+import { BadgePercent, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { isSuperadminClientMode } from '@/lib/api'
 import { fetchAdminDashboard } from '@/data/adminDashboard'
@@ -24,6 +24,7 @@ interface AdminNavItem extends NavItem {
 
 const NAV: AdminNavItem[] = [
   { section: 'Pilotage', to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, permissions: [], tab: true, tabLabel: 'Accueil' },
+  { section: 'Pilotage', to: '/admin/gouvernance', label: 'Gouvernance SuperAdmin', icon: ShieldCheck, permissions: ['settings.update_critical'] },
   { section: 'Opérations', to: '/admin/validations', label: 'Validations', icon: CircleCheck, permissions: ['payments.validate_manual', 'yem_validations.view'], tab: true },
   { section: 'Opérations', to: '/admin/finance', label: 'Finance', icon: Landmark, permissions: ['reports.view', 'payouts.view'], tab: true },
   { section: 'Opérations', to: '/admin/paiements', label: 'Paiements', icon: CreditCard, permissions: ['payments.view'] },
@@ -53,7 +54,7 @@ export function AdminLayout() {
 
   const sections = useMemo<NavSection[]>(() => {
     if (!role) return []
-    const visible = NAV.filter((item) => (item.to !== '/admin/securite' || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
+    const visible = NAV.filter((item) => (!['/admin/securite', '/admin/gouvernance'].includes(item.to) || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
     const titles = [...new Set(visible.map((item) => item.section))]
     return titles.map((title) => ({
       title,
