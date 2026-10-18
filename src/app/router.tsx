@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 
 const StaffLoginPage = lazy(() => import('@/pages/StaffLoginPage'))
+const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const SuperadminLoginPage = lazy(() => import('@/pages/SuperadminLoginPage'))
 const SuperadminSecurityPage = lazy(() => import('@/pages/admin/SuperadminSecurityPage'))
 const SuperadminGovernancePage = lazy(() => import('@/pages/admin/SuperadminGovernancePage'))
@@ -19,6 +21,8 @@ const JournalPage = lazy(() => import('@/pages/admin/JournalPage'))
 
 const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
 const SUPERADMIN_PATH_MODE = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true'
+// Deploy the new login only after the backend guardian feature is enabled.
+const GUARDIAN_LOGIN_ENABLED = import.meta.env.VITE_STAFF_GUARDIAN_ENABLED === 'true'
 const ALLOW_SUPERADMIN_ENTRY = IS_SUPERADMIN_HOST || SUPERADMIN_PATH_MODE
 
 function Loading() {
@@ -35,10 +39,10 @@ function S({ children }: { children: React.ReactNode }) {
 
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/admin'} replace /> },
-  { path: '/connexion', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/equipe/connexion'} replace /> },
-  { path: '/equipe/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : <S><StaffLoginPage /></S> },
+  { path: '/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : GUARDIAN_LOGIN_ENABLED ? <Navigate to="/equipe/connexion" replace /> : <S><LoginPage /></S> },
+  { path: '/equipe/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : GUARDIAN_LOGIN_ENABLED ? <S><StaffLoginPage /></S> : <Navigate to="/connexion" replace /> },
   { path: '/superadmin/connexion', element: ALLOW_SUPERADMIN_ENTRY ? <S><SuperadminLoginPage /></S> : <Navigate to="/connexion" replace /> },
-  { path: '/activation', element: <Navigate to="/equipe/connexion" replace /> },
+  { path: '/activation', element: GUARDIAN_LOGIN_ENABLED ? <Navigate to="/equipe/connexion" replace /> : <S><ActivationPage /></S> },
   {
     path: '/admin',
     element: <AdminLayout />,
