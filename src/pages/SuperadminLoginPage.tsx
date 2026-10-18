@@ -129,14 +129,21 @@ export default function SuperadminLoginPage() {
             })}>
               <p className="text-sm text-[var(--color-text-muted)]">Configurez vos trois adresses e-mail et sélectionnez la clé .cectkey fournie pour la première connexion.</p>
               <label className="block space-y-2 text-sm font-semibold">Clé initiale (.cectkey)
-                <input className={input} type="file" accept=".cectkey,application/json" required
+                <input className={input} type="file" accept=".cectkey" required
                   onChange={(event) => {
                     const file = event.target.files?.[0]
+                    setKeyFile(null)
                     if (!file) return
+                    if (!file.name.toLowerCase().endsWith('.cectkey')) {
+                      setError('Ce fichier est un certificat. Choisissez CECT-SuperAdmin-DEMO.cectkey dans votre kit, pas le .crt.')
+                      event.currentTarget.value = ''
+                      return
+                    }
                     void file.text().then((data) => { setKeyFile(parseKeyFile(data)); setError('') })
                       .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Clé invalide.'))
                   }} />
               </label>
+              {keyFile && <p role="status" className="text-sm text-[var(--color-primary)]">Clé CECT valide : fichier .cectkey chargé.</p>}
               {emails.map((value, i) => <label className="block text-sm font-semibold" key={i}>E-mail {i + 1}
                 <input type="email" autoComplete="off" required className={`${input} mt-1`} value={value} onChange={(e) => updateEmail(i, e.target.value)} />
               </label>)}
@@ -152,15 +159,21 @@ export default function SuperadminLoginPage() {
               {codes.map((value, i) => <label className="block text-sm font-semibold" key={i}>Code de l'e-mail {i + 1}
                 <input className={`${input} mt-1`} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required value={value} onChange={(e) => updateCode(i, e.target.value)} autoComplete="one-time-code" />
               </label>)}
-              <button disabled={busy || codes.some((c) => c.length !== 6)} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">Valider et créer le nouveau fichier</button>
+              <button disabled={busy || codes.some((c) => c.length !== 6)} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">{stage === 'enroll-codes' ? 'Valider les codes et activer ma clé' : 'Valider et créer une nouvelle clé'}</button>
             </form>
           )}
           {stage === 'select-key' && (
             <div className="space-y-5">
               <label className="block space-y-2 text-sm font-semibold"><FileKey2 size={20} /> Choisir mon fichier .cectkey
-                <input type="file" accept=".cectkey,application/json" className={input} onChange={(event) => {
+                <input type="file" accept=".cectkey" className={input} onChange={(event) => {
                   const file = event.target.files?.[0]
+                  setKeyFile(null)
                   if (!file) return
+                  if (!file.name.toLowerCase().endsWith('.cectkey')) {
+                    setError('Choisissez un fichier personnel .cectkey, pas un certificat .crt ou .p12.')
+                    event.currentTarget.value = ''
+                    return
+                  }
                   void file.text().then((value) => { setKeyFile(parseKeyFile(value)); setError('') })
                     .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Clé non valide.'))
                 }} />
