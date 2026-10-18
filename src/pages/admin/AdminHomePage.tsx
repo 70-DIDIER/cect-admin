@@ -58,7 +58,6 @@ const METHOD_ICONS: Record<string, LucideIcon> = {
 const GREETING_BY_ROLE: Record<UserRole, string> = {
   administrateur: 'Voici l’activité de la coopérative sur la période choisie.',
   superadmin: 'Vue d’ensemble de la plateforme, de l’activité et de la sécurité.',
-  validateur: 'Voici ce qui attend votre décision aujourd’hui.',
   comptabilite: 'Suivi des encaissements et des versements dus.',
   utilisateur: '',
 }
