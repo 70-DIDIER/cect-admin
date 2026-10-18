@@ -11,7 +11,7 @@ export interface FormField {
   initial?: string
   options?: ReadonlyArray<{ value: string; label: string }>
   hint?: string
-  section?: 'main' | 'advanced' | 'final'
+  section?: 'main' | 'cashback' | 'advanced' | 'final'
 }
 
 interface FormDialogProps {
@@ -92,16 +92,30 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
                 <div className="grid gap-4 sm:grid-cols-2">
                   {fields.filter(field => !field.section || field.section === 'main').map(renderField)}
                 </div>
+                {fields.some(field => field.section === 'cashback') && (
+                  <div className="rounded-2xl border border-[var(--color-border)] p-4">
+                    <div className="mb-4">
+                      <p className="text-sm font-bold">2. Bonus YEM lié à ce pack</p>
+                      <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                        Le bonus est ajouté en YEM ; le membre paie toujours le montant complet en FCFA.
+                        Ce réglage concerne seulement Consommateur et Personnel.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {fields.filter(field => field.section === 'cashback').map(renderField)}
+                    </div>
+                  </div>
+                )}
                 {fields.some(field => field.section === 'advanced') && (
                   <details className="rounded-2xl border border-[var(--color-border)] p-4">
-                    <summary className="cursor-pointer text-sm font-bold">2. Paramètres avancés — facultatifs et plafonds</summary>
+                    <summary className="cursor-pointer text-sm font-bold">Paramètres avancés — facultatifs et plafonds</summary>
                     <p className="mt-2 text-xs text-[var(--color-text-muted)]">Conservez les valeurs proposées si vous ne souhaitez pas changer le cumul, les limites d'opération ou les règles d'expiration.</p>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">{fields.filter(field => field.section === 'advanced').map(renderField)}</div>
                   </details>
                 )}
                 {fields.some(field => field.section === 'final') && (
                   <div className="space-y-3">
-                    <p className="text-sm font-bold">3. Validation et publication</p>
+                    <p className="text-sm font-bold">Validation et publication</p>
                     {fields.filter(field => field.section === 'final').map(renderField)}
                   </div>
                 )}
