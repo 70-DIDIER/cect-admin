@@ -361,7 +361,9 @@ export default function PacksPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const section = searchParams.get('section') === 'conditions' ? 'conditions' : 'formules'
   const changeSection = (next: 'formules' | 'conditions') => setSearchParams(next === 'formules' ? {} : { section: next })
-  const [family, setFamily] = useState(() => searchParams.get('family') || (searchParams.get('section') === 'cashback' ? 'CONSOMMATEUR' : ''))
+  const [family, setFamily] = useState(() => searchParams.get('family') || (searchParams.get('section') === 'cashback' ? 'CONSOMMATEUR' : 'VENDEUR'))
+  const [showArchives, setShowArchives] = useState(false)
+  const [removing, setRemoving] = useState<Plan | null>(null)
   const [search, setSearch] = useState('')
   const [target, setTarget] = useState<{ plan: Plan; to: Status } | null>(null)
   const [versionTarget, setVersionTarget] = useState<Plan | null>(null)
@@ -385,8 +387,8 @@ export default function PacksPage() {
   const plans = query.data?.data ?? []
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    return plans.filter(plan => !needle || [plan.name, plan.code, plan.description ?? ''].some(v => v.toLowerCase().includes(needle)))
-  }, [plans, search])
+    return plans.filter(plan => (showArchives ? plan.status === 'archived' : plan.status !== 'archived') && (!needle || [plan.name, plan.code, plan.description ?? ''].some(v => v.toLowerCase().includes(needle))))
+  }, [plans, search, showArchives])
   const counts = useMemo(() => ({
     total: plans.length,
     published: plans.filter(plan => plan.status === 'published').length,
@@ -446,19 +448,27 @@ export default function PacksPage() {
             </div>
           ))}
         </div>
+        <nav aria-label="Familles de packs" className="flex flex-wrap gap-2">
+          {Object.entries(FAMILIES).map(([code, meta]) => (
+            <button type="button" key={code} aria-pressed={family === code} onClick={() => { setFamily(code); setShowArchives(false); }}
+              className={`rounded-xl border px-4 py-3 text-sm font-bold ${family === code ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+              {meta.label}
+            </button>
+          ))}
+          <button type="button" aria-pressed={family === ''} onClick={() => setFamily('')}
+            className={`rounded-xl border px-4 py-3 text-sm font-bold ${family === '' ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)]'}`}>
+            Toutes les formules
+          </button>
+        </nav>
         <div className="flex flex-wrap items-center gap-3">
           <label className="relative min-w-0 flex-1 basis-56">
             <Search size={16} className="absolute left-3 top-3 text-[var(--color-text-muted)]"/>
             <span className="sr-only">Rechercher un pack</span>
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une formule ou un code" className={FIELD + ' w-full pl-10'}/>
           </label>
-          <label className="flex items-center gap-2">
-            <SlidersHorizontal size={16}/>
-            <span className="sr-only">Filtrer par famille</span>
-            <select aria-label="Famille" value={family} onChange={event => setFamily(event.target.value)} className={FIELD}>
-              <option value="">Toutes les familles</option>
-              {Object.entries(FAMILIES).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
-            </select>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showArchives} onChange={event => setShowArchives(event.target.checked)}/>
+            {showArchives ? 'Archives uniquement' : 'Voir les archives'}
           </label>
         </div>
         {query.isPending && <LoadingBlock />}
@@ -504,6 +514,9 @@ export default function PacksPage() {
                   )}
                   {mayManage && (
                     <GhostButton onClick={() => setDuplicating(plan)}><Copy size={14}/> Dupliquer</GhostButton>
+                  )}
+                  {mayManage && plan.status !== 'archived' && (
+                    <GhostButton onClick={() => setRemoving(plan)}><Archive size={14}/> Supprimer / retirer</GhostButton>
                   )}
                   {mayManage && plan.status === 'published' && <GhostButton onClick={() => setTarget({ plan, to: 'suspended' })}><CirclePause size={14}/> Suspendre</GhostButton>}
                   {mayManage && plan.status === 'suspended' && <GhostButton onClick={() => setTarget({ plan, to: 'published' })}><CircleCheck size={14}/> Réactiver</GhostButton>}
@@ -559,6 +572,18 @@ export default function PacksPage() {
               description: values.description.trim() || null,
               reason: values.reason,
             }, newIdempotencyKey())
+            await refresh()
+          }}
+        />
+      )}
+      {removing && (
+        <FormDialog title={'Supprimer ou retirer : ' + removing.code}
+          subtitle="Un brouillon non utilisé sera supprimé définitivement. Un pack déjà publié ou acheté sera archivé pour conserver les contrats et opérations des membres."
+          submitLabel="Confirmer la suppression / le retrait" danger onClose={() => setRemoving(null)}
+          fields={[{ name: 'reason', label: 'Motif obligatoire', type: 'textarea', required: true }]}
+          onSubmit={async values => {
+            const { http } = await import('@/lib/api')
+            await http.delete('/admin/packs/plans/' + removing.id, { data: { reason: values.reason } })
             await refresh()
           }}
         />
