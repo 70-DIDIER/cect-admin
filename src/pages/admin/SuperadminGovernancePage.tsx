@@ -43,7 +43,8 @@ const groups = [
 const modules = [
   { name: 'Tarifs et politiques', to: '/admin/configuration', description: 'Prix, taux, plafonds, seuils et paramètres critiques', icon: Settings },
   { name: 'Packs et quotas', to: '/admin/packs', description: 'Créer, versionner, publier et suspendre les formules', icon: Package },
-  { name: 'Cashback & pays', to: '/admin/cashback', description: 'Bonus YEM et catalogue des moyens de paiement', icon: BadgePercent },
+  { name: 'Cashback Consommateur & Personnel', to: '/admin/packs?section=cashback', description: 'Bonus YEM directement dans les packs éligibles', icon: BadgePercent },
+  { name: 'Pays de paiement', to: '/admin/pays', description: 'Pays éligibles et paramètres des versements', icon: CreditCard },
   { name: 'Membres', to: '/admin/membres', description: 'Personnes physiques, morales, droits et statut', icon: Users },
   { name: 'Équipe & rôles', to: '/admin/equipe', description: 'Comptabilité, Administrateur et permissions RBAC', icon: UserCog },
   { name: 'Validations YEM', to: '/admin/validations', description: 'Vérifications et arbitrages opérés par Comptabilité', icon: CircleCheck },
