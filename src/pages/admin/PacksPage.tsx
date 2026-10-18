@@ -49,6 +49,7 @@ interface Plan {
   versions?: Version[]
 }
 interface Setting { key: string; current_value: number; edit_level: string }
+interface CashbackPolicy { enabled: boolean; rate_bps: number; families: string[] }
 const FAMILIES: Record<Family, { label: string; tone: Tone; hint: string }> = {
   VENDEUR: { label: 'Vendeur', tone: 'gold', hint: 'Cession de YEM à la CECT · quotas mensuels' },
   CONSOMMATEUR: { label: 'Consommateur', tone: 'primary', hint: 'Achats YEM et consommation chez les marchands' },
@@ -310,6 +311,12 @@ export default function PacksPage() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
   const mayManage = can('packs.manage')
   const superadmin = user?.role === 'superadmin' && can('settings.update_critical')
+  const cashbackPolicy = useQuery({
+    queryKey: ['packs-cashback-summary'],
+    queryFn: () => get<{ current_value: CashbackPolicy }>('/admin/settings/cashback.rules'),
+    enabled: superadmin && section === 'formules',
+    staleTime: 30_000,
+  })
   const query = useQuery({
     queryKey: ['admin-plans', family],
     queryFn: () => getRaw<{ data: Plan[] }>('/admin/packs/plans', { per_page: 100, ...(family ? { family } : {}) }),
@@ -423,6 +430,14 @@ export default function PacksPage() {
                   <Row label="Cycles" value={v?.period ? v.period.cycles + ' × ' + v.period.every + ' ' + v.period.unit : 'À définir'}/>
                   <Row label="Cumul" value={v?.cumulative == null ? '—' : v.cumulative ? 'Oui' : 'Non'}/>
                   <Row label="Admissibilité" value={v?.eligible_person_types?.map(t => t === 'natural' ? 'PF' : 'PM').join(' / ') ?? (plan.family === 'MARCHAND' ? 'PM' : 'À définir')}/>
+                  <Row label="Bonus cashback YEM" value={
+                    plan.family === 'VENDEUR' || plan.family === 'MARCHAND'
+                      ? 'Jamais applicable'
+                      : !superadmin || cashbackPolicy.isPending ? 'Consulter les règles'
+                      : cashbackPolicy.data?.current_value.enabled && cashbackPolicy.data.current_value.families.includes(plan.family)
+                        ? `Activé : ${(cashbackPolicy.data.current_value.rate_bps / 100).toLocaleString('fr-FR')} %`
+                        : 'Désactivé pour cette famille'
+                  }/>
                 </dl>
                 {plan.description && <p className="mt-3 line-clamp-2 text-xs text-[var(--color-text-muted)]">{plan.description}</p>}
                 {!v && <p className="mt-3 rounded-lg border border-amber-500/30 p-2 text-xs">Formule sans version publiée : non souscriptible.</p>}
