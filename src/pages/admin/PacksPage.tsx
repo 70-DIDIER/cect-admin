@@ -121,6 +121,32 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
       initial: String(base?.rules?.min_topup_xof ?? 5000),
     })
   }
+  if (plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') {
+    const packBonus = base?.rules?.cashback as { enabled?: boolean; rate_bps?: number; max_yem?: string | null; rounding?: string } | undefined
+    fields.push(
+      {
+        name: 'cashback_mode',
+        label: 'Offrir des YEM bonus sur cette formule ?',
+        section: 'cashback',
+        type: 'select',
+        initial: packBonus ? (packBonus.enabled ? 'yes' : 'no') : base ? 'legacy' : 'no',
+        options: [
+          { value: 'no', label: 'Non, aucun bonus' },
+          { value: 'yes', label: 'Oui, activer un bonus sur cette formule' },
+          ...(base && !packBonus ? [{ value: 'legacy', label: 'Garder la règle historique de ce pack' }] : []),
+        ],
+        hint: plan.family === 'CONSOMMATEUR'
+          ? 'Bonus calculé une seule fois sur les YEM du pack, puis réparti sur les périodes.'
+          : 'Bonus calculé au moment de chaque rechargement, sans limite mensuelle de quota.',
+      },
+      { name: 'cashback_percent', section: 'cashback', label: 'Bonus en % (si activé)', type: 'number',
+        initial: String((packBonus?.rate_bps ?? 0) / 100), hint: 'Exemple : 5 signifie 5 YEM offerts pour 100 YEM achetés. Maximum 99,99 %.' },
+      { name: 'cashback_max_yem', section: 'cashback', label: 'Maximum de YEM offerts (facultatif)',
+        initial: packBonus?.max_yem ?? '', hint: plan.family === 'CONSOMMATEUR'
+          ? 'Plafond de bonus sur la totalité du pack. Laisser vide pour aucun plafond.'
+          : 'Plafond de bonus par rechargement. Laisser vide pour aucun plafond.' },
+    )
+  }
   fields.push(
     { name: 'reason', label: 'Pourquoi modifiez-vous cette formule ?', section: 'final', type: 'textarea', required: true, hint: 'Ce motif est conservé dans l’historique. Minimum cinq caractères.' },
     { name: 'publish', label: 'Que faire de cette nouvelle version ?', section: 'final', type: 'select', options: [
@@ -168,6 +194,29 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
   } else {
     rules.min_topup_xof = Number(values.min_topup_xof)
     rules.rate_setting_key = 'rates.sale_xof_per_yem'
+  }
+  if (plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') {
+    if (values.cashback_mode === 'legacy') {
+      delete rules.cashback
+    } else {
+      const bonusPercent = Number(values.cashback_percent || 0)
+      const enabled = values.cashback_mode === 'yes'
+      if (enabled && (!Number.isFinite(bonusPercent) || bonusPercent <= 0 || bonusPercent > 99.99)) {
+        throw new Error('Le bonus doit être supérieur à 0 % et inférieur ou égal à 99,99 %.')
+      }
+      const cap = values.cashback_max_yem?.trim() || null
+      if (enabled && cap !== null && !/^\\d{1,22}(\\.\\d{1,6})?$/.test(cap)) {
+        throw new Error('Le plafond YEM doit être positif, avec au maximum 6 décimales.')
+      }
+      rules.cashback = {
+        enabled,
+        rate_bps: enabled ? Math.round(bonusPercent * 100) : 0,
+        max_yem: enabled ? cap : null,
+        rounding: 'down',
+      }
+    }
+  } else {
+    delete rules.cashback
   }
   payload.rules = rules
   return payload
