@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, ChevronLeft, ChevronRight, Search, User } from 'lucide-react'
+import { Building2, ChevronLeft, ChevronRight, Search, User, UserPlus, UserX } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { Avatar } from '@/components/dashboard/Avatar'
 import { Panel } from '@/components/dashboard/Panel'
@@ -9,7 +9,7 @@ import { SegmentedControl } from '@/components/dashboard/SegmentedControl'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import type { Tone } from '@/components/dashboard/tones'
 import { FormDialog } from '@/components/ui/FormDialog'
-import { get, getRaw, post } from '@/lib/api'
+import { get, getRaw, post, newIdempotencyKey } from '@/lib/api'
 import { formatDateMedium, formatXof, formatYem } from '@/lib/format'
 import { methodName } from '@/features/payments/types'
 
@@ -100,24 +100,25 @@ function StatusPill({ status }: { status: string }) {
 function MemberDialog({ memberId, onClose }: { memberId: string; onClose: () => void }) {
   const queryClient = useQueryClient()
   const { can } = useAuth()
-  const [confirming, setConfirming] = useState<'suspend' | 'reactivate' | null>(null)
+  const [confirming, setConfirming] = useState<'suspend' | 'reactivate' | 'close' | null>(null)
   const query = useQuery({ queryKey: ['member-overview', memberId], queryFn: () => get<MemberOverview>(`/admin/members/${memberId}/overview`), staleTime: 0 })
   const data = query.data
   const member = data?.member
 
   if (confirming && member) {
     const suspend = confirming === 'suspend'
+    const closing = confirming === 'close'
     return (
       <FormDialog
-        title={suspend ? 'Suspendre le compte' : 'Réactiver le compte'}
+        title={closing ? 'Clore l’adhésion' : suspend ? 'Suspendre le compte' : 'Réactiver le compte'}
         subtitle={displayName(member)}
-        fields={[]}
-        submitLabel={suspend ? 'Suspendre' : 'Réactiver'}
-        danger={suspend}
-        confirmText={suspend ? 'Le membre ne pourra plus se connecter ni effectuer d’opération.' : 'Le membre retrouvera l’accès à son espace.'}
+        fields={[{ name: 'reason', label: 'Motif de la décision (obligatoire)', type: 'textarea', required: true }]}
+        submitLabel={closing ? 'Clore définitivement l’accès' : suspend ? 'Suspendre' : 'Réactiver'}
+        danger={suspend || closing}
+        confirmText={closing ? 'Le compte sera clos et retiré des comptes actifs. Les paiements et YEM resteront conservés dans les journaux pour la traçabilité.' : suspend ? 'Le membre ne pourra plus se connecter ni effectuer d’opération.' : 'Le membre retrouvera l’accès à son espace.'}
         onClose={() => setConfirming(null)}
-        onSubmit={async () => {
-          await post(`/admin/members/${member.id}/${confirming}`)
+        onSubmit={async values => {
+          await post(`/admin/members/${member.id}/${confirming}`, { reason: values.reason })
           await queryClient.invalidateQueries({ queryKey: ['member-overview', memberId] })
           await queryClient.invalidateQueries({ queryKey: ['members'] })
         }}
@@ -161,6 +162,12 @@ function MemberDialog({ memberId, onClose }: { memberId: string; onClose: () => 
               {member.status === 'active' ? 'Suspendre le compte' : 'Réactiver le compte'}
             </button>
           )}
+          {can('members.manage') && member.status !== 'closed' && (
+            <button type="button" onClick={() => setConfirming('close')}
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[var(--color-danger)]/40 px-4 text-xs font-bold text-[var(--color-danger)]">
+              <UserX size={15}/> Clore / retirer l’adhésion
+            </button>
+          )}
         </div>
       )}
     </FormDialog>
@@ -195,6 +202,9 @@ export default function MembresPage() {
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [inviting, setInviting] = useState(false)
+  const { can } = useAuth()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -224,6 +234,10 @@ export default function MembresPage() {
         <header>
           <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text)]">Membres</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{meta ? `${meta.total} membre(s)` : 'Recherche par nom, e-mail, numéro de membre, Pernum ou raison sociale.'}</p>
+          {can('members.manage') && <button type="button" onClick={() => setInviting(true)}
+            className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-bold text-white">
+            <UserPlus size={18}/> Nouvelle adhésion
+          </button>}
         </header>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -305,6 +319,21 @@ export default function MembresPage() {
         </Panel>
       </div>
 
+      {inviting && (
+        <FormDialog title="Inviter un nouvel adhérent" subtitle="Un e-mail contenant le formulaire est envoyé au candidat. Le candidat complète lui-même ses informations, choisit son mot de passe et accepte les statuts. Aucun paiement n’est simulé à cette étape."
+          submitLabel="Envoyer l’invitation" onClose={() => setInviting(false)}
+          fields={[
+            { name: 'person_type', label: 'Type d’adhérent', type: 'select', options: [{ value: 'natural', label: 'Personne physique' }, { value: 'legal', label: 'Personne morale' }] },
+            { name: 'first_name', label: 'Prénom', required: true },
+            { name: 'last_name', label: 'Nom', required: true },
+            { name: 'email', label: 'E-mail du futur adhérent', required: true },
+          ]}
+          onSubmit={async values => {
+            await post('/admin/members/invitations', values, newIdempotencyKey())
+            await queryClient.invalidateQueries({ queryKey: ['members'] })
+          }}
+        />
+      )}
       {openId && <MemberDialog memberId={openId} onClose={() => setOpenId(null)} />}
     </>
   )
