@@ -591,6 +591,11 @@ export default function PacksPage() {
 }
 function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void; changed: () => Promise<unknown> }) {
   const details = useQuery({ queryKey: ['plan-version-edit', plan.id], queryFn: () => get<Plan>('/admin/packs/plans/' + plan.id), staleTime: 0 })
+  const saleRate = useQuery({
+    queryKey: ['pack-preview', 'sale-rate'],
+    queryFn: () => get<{ current_value: number }>('/admin/settings/rates.sale_xof_per_yem'),
+    enabled: plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL',
+  })
   const base = details.data?.versions?.[0] ?? plan.current_version
   if (details.isPending) return (
     <div role="dialog" aria-modal="true" aria-label="Chargement des conditions" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -623,7 +628,21 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
         const quota = Number(values.quota_per_period || 0)
         const isReference = plan.family === 'CONSOMMATEUR' && Number(values.reference_value_xof) > 0
         const reference = Number(values.reference_value_xof || 0)
-        const total = cycles > 0 && quota > 0 ? cycles * quota : null
+        const unitRate = saleRate.data?.current_value ?? 0
+        const purchaseYem = isReference && unitRate > 0 && cycles > 0 ? reference / (unitRate * cycles) : quota
+        const total = cycles > 0 && purchaseYem > 0 ? cycles * purchaseYem : null
+        const mode = values.cashback_mode
+        const percentage = Number(values.cashback_percent || 0)
+        const maxBonus = values.cashback_max_yem?.trim() ? Number(values.cashback_max_yem) : Infinity
+        const bonus = total !== null && mode === 'yes' && Number.isFinite(percentage)
+          ? Math.max(0, Math.min(total * percentage / 100, Number.isFinite(maxBonus) ? maxBonus : Infinity))
+          : 0
+        const topup = Number(values.min_topup_xof || 0)
+        const personalBase = unitRate > 0 ? topup / unitRate : null
+        const personalBonus = personalBase !== null && mode === 'yes'
+          ? Math.max(0, Math.min(personalBase * percentage / 100, Number.isFinite(maxBonus) ? maxBonus : Infinity))
+          : 0
+        const display = (amount: number) => amount.toLocaleString('fr-FR', { maximumFractionDigits: 6 })
         return (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--dash-bg)] p-4 text-sm">
             <p className="font-bold">Comprendre cette formule</p>
@@ -633,13 +652,27 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
               {plan.family === 'PERSONNEL' && 'Le membre ouvre un compte rechargeable. Aucun quota ni durée fixes ; le cashback éventuel intervient sur ses rechargements.'}
               {plan.family === 'MARCHAND' && 'Le marchand (personne morale) dispose de droits pour accepter puis céder ses YEM à la coopérative. Aucun cashback.'}
             </p>
-            {plan.family !== 'PERSONNEL' && (
-              <p className="mt-2 font-semibold">
-                {isReference ? `Montant : ${formatXof(reference)} ; les YEM par période seront calculés par le backend.` :
-                  cycles > 0 && total !== null ? `${cycles} distributions × ${quota} YEM = ${total.toLocaleString('fr-FR')} YEM sur la durée.` :
-                  'Renseignez le quota par période et la durée pour voir le total de YEM.'}
-              </p>
+            {plan.family === 'CONSOMMATEUR' && total !== null && (
+              <div className="mt-3 space-y-1 rounded-xl border border-[var(--color-border)] p-3">
+                <p><strong>Prix payé :</strong> {formatXof(isReference ? reference : Number(values.price_xof || 0))}</p>
+                <p><strong>YEM achetés :</strong> {display(total)} YEM au total ({display(purchaseYem)} YEM par période × {cycles})</p>
+                <p><strong>YEM bonus :</strong> {mode === 'legacy' ? 'Selon l’ancienne règle du pack' : display(bonus) + ' YEM'}</p>
+                <p className="font-bold"><strong>Total prévu :</strong> {mode === 'legacy' ? 'Selon la règle historique' : display(total + bonus) + ' YEM'}</p>
+              </div>
             )}
+            {plan.family === 'PERSONNEL' && (
+              <div className="mt-3 space-y-1 rounded-xl border border-[var(--color-border)] p-3">
+                <p><strong>Ouverture du pack :</strong> {formatXof(Number(values.price_xof || 0))} ; ce montant est distinct des rechargements.</p>
+                <p><strong>Exemple de rechargement :</strong> {formatXof(topup || 0)} au cours {unitRate || 'non chargé'} FCFA/YEM</p>
+                <p><strong>YEM achetés :</strong> {personalBase === null ? 'Cours indisponible' : display(personalBase) + ' YEM'}</p>
+                <p><strong>Bonus :</strong> {mode === 'legacy' ? 'Selon l’ancienne règle du pack' : display(personalBonus) + ' YEM'}</p>
+                <p className="font-bold"><strong>Total prévu :</strong> {personalBase === null || mode === 'legacy' ? 'Calcul selon les paramètres en vigueur' : display(personalBase + personalBonus) + ' YEM'}</p>
+              </div>
+            )}
+            {(plan.family === 'VENDEUR' || plan.family === 'MARCHAND') && (
+              <p className="mt-2 font-semibold">{total === null ? 'Renseignez le plafond YEM et la durée.' : `${cycles} périodes × ${display(purchaseYem)} YEM = ${display(total)} YEM de quota sur la durée.`} Aucun cashback sur cette famille.</p>
+            )}
+            <p className="mt-2 text-xs text-[var(--color-text-muted)]">Aperçu indicatif. Le serveur calcule les quantités exactes à 6 décimales, conserve les règles de la version publiée et crédite les bonus uniquement après paiement confirmé.</p>
           </div>
         )
       }}
