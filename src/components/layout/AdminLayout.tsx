@@ -12,7 +12,6 @@ import { AppShell, type NavItem, type NavSection } from './AppShell'
 const ROLE_LABELS: Record<UserRole, string> = {
   administrateur: 'Administrateur',
   superadmin: 'Super-administrateur',
-  validateur: 'Validateur',
   comptabilite: 'Comptabilité',
   utilisateur: 'Membre',
 }
