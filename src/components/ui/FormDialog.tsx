@@ -12,6 +12,7 @@ export interface FormField {
   options?: ReadonlyArray<{ value: string; label: string }>
   hint?: string
   section?: 'main' | 'cashback' | 'advanced' | 'final'
+  showWhen?: { name: string; value: string }
 }
 
 interface FormDialogProps {
@@ -48,6 +49,8 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
   }
 
   const set = (name: string, value: string) => setValues((current) => ({ ...current, [name]: value }))
+
+  const isVisible = (field: FormField) => !field.showWhen || values[field.showWhen.name] === field.showWhen.value
 
   const renderField = (field: FormField) => (
     <div key={field.name}>
@@ -90,7 +93,7 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
                   <p className="mt-1 text-xs text-[var(--color-text-muted)]">Commencez par le montant à payer, la quantité de YEM et la durée. Les réglages facultatifs sont plus bas.</p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {fields.filter(field => !field.section || field.section === 'main').map(renderField)}
+                  {fields.filter(field => (!field.section || field.section === 'main') && isVisible(field)).map(renderField)}
                 </div>
                 {fields.some(field => field.section === 'cashback') && (
                   <div className="rounded-2xl border border-[var(--color-border)] p-4">
@@ -102,7 +105,7 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {fields.filter(field => field.section === 'cashback').map(renderField)}
+                      {fields.filter(field => field.section === 'cashback' && isVisible(field)).map(renderField)}
                     </div>
                   </div>
                 )}
@@ -110,18 +113,18 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
                   <details className="rounded-2xl border border-[var(--color-border)] p-4">
                     <summary className="cursor-pointer text-sm font-bold">Paramètres avancés — facultatifs et plafonds</summary>
                     <p className="mt-2 text-xs text-[var(--color-text-muted)]">Conservez les valeurs proposées si vous ne souhaitez pas changer le cumul, les limites d'opération ou les règles d'expiration.</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">{fields.filter(field => field.section === 'advanced').map(renderField)}</div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">{fields.filter(field => field.section === 'advanced' && isVisible(field)).map(renderField)}</div>
                   </details>
                 )}
                 {fields.some(field => field.section === 'final') && (
                   <div className="space-y-3">
                     <p className="text-sm font-bold">Validation et publication</p>
-                    {fields.filter(field => field.section === 'final').map(renderField)}
+                    {fields.filter(field => field.section === 'final' && isVisible(field)).map(renderField)}
                   </div>
                 )}
               </>
             ) : (
-              fields.map(renderField)
+              fields.filter(isVisible).map(renderField)
             )}
             {fields.length === 0 && confirmText && <p className="text-sm text-[var(--color-text)]">{confirmText}</p>}
             {error && (
