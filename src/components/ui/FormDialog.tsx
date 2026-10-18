@@ -13,6 +13,7 @@ export interface FormField {
   hint?: string
   section?: 'main' | 'cashback' | 'advanced' | 'final'
   showWhen?: { name: string; value: string }
+  step?: string
 }
 
 interface FormDialogProps {
@@ -67,7 +68,7 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
           ))}
         </select>
       ) : (
-        <input id={`f-${field.name}`} type={field.type ?? 'text'} required={field.required} value={values[field.name]} onChange={(event) => set(field.name, event.target.value)} className={INPUT} />
+        <input id={`f-${field.name}`} type={field.type ?? 'text'} step={field.step} required={field.required} value={values[field.name]} onChange={(event) => set(field.name, event.target.value)} className={INPUT} />
       )}
     </div>
   )
