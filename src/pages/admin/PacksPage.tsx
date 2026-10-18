@@ -65,7 +65,6 @@ const PERIODS = [
   { value: 'month', label: 'Mensuelle' },
   { value: 'week', label: 'Hebdomadaire' },
   { value: 'day', label: 'Quotidienne' },
-  { value: 'year', label: 'Annuelle' },
 ]
 const END_TERM = [
   { value: 'expire', label: 'Expiration du quota restant' },
