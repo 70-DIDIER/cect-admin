@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Archive, BadgePercent, CircleCheck, CirclePause, Copy, FileClock, FilePlus2,
-  Layers3, Pencil, Plus, Search, ShieldCheck, SlidersHorizontal, X,
+  Archive, CircleCheck, CirclePause, Copy, FileClock, FilePlus2,
+  Pencil, Plus, Search, ShieldCheck, SlidersHorizontal, X,
 } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { Panel } from '@/components/dashboard/Panel'
@@ -15,6 +15,7 @@ import { FormDialog, type FormField } from '@/components/ui/FormDialog'
 import { get, getRaw, newIdempotencyKey, post, put } from '@/lib/api'
 import { formatXof, formatYem } from '@/lib/format'
 import { ErrorLine, FIELD, GhostButton, LoadingBlock, PageIntro } from './shared'
+import { CashbackCard } from './CashbackPage'
 
 type Family = 'VENDEUR' | 'CONSOMMATEUR' | 'PERSONNEL' | 'MARCHAND'
 type Status = 'draft' | 'published' | 'suspended' | 'retired' | 'archived'
@@ -299,6 +300,9 @@ function MembershipFees({ superadmin }: { superadmin: boolean }) {
 export default function PacksPage() {
   const { can, user } = useAuth()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const section = searchParams.get('section') === 'cashback' ? 'cashback' : searchParams.get('section') === 'conditions' ? 'conditions' : 'formules'
+  const changeSection = (next: 'formules' | 'cashback' | 'conditions') => setSearchParams(next === 'formules' ? {} : { section: next })
   const [family, setFamily] = useState('')
   const [search, setSearch] = useState('')
   const [target, setTarget] = useState<{ plan: Plan; to: Status } | null>(null)
@@ -330,15 +334,52 @@ export default function PacksPage() {
     <>
       <Helmet><title>Gestion des packs — CECT Admin</title></Helmet>
       <div className="space-y-6">
-        <PageIntro title="Administration des packs"
-          description="Paramétrez chacune des formules Vendeur, Consommateur, Personnel et Marchand. Les versions publiées sont immuables ; les détenteurs existants conservent les conditions achetées."
-          actions={mayManage && (
+        <PageIntro title="Packs, quotas et avantages"
+          description="Un seul espace pour définir les quatre familles, leurs quotas, le cashback Consommateur/Personnel et les frais d'adhésion. Les anciennes souscriptions conservent leurs conditions."
+          actions={mayManage && section === 'formules' && (
             <button onClick={() => setCreating(true)} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-bold text-white">
               <Plus size={17}/> Créer une formule
             </button>
           )}
         />
-        {superadmin && <MembershipFees superadmin={superadmin} />}
+        <nav aria-label="Sections de gestion des packs" className="flex flex-wrap gap-2 rounded-2xl bg-[var(--dash-bg)] p-2">
+          {([
+            ['formules', '1. Formules & quotas'],
+            ['cashback', '2. Bonus cashback'],
+            ['conditions', '3. Adhésion & règles'],
+          ] as const).map(([id, title]) => (
+            <button key={id} type="button" aria-current={section === id ? 'page' : undefined}
+              onClick={() => changeSection(id)}
+              className={`rounded-xl px-4 py-3 text-sm font-bold transition-colors ${section === id ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text)] hover:bg-[var(--color-surface)]'}`}>
+              {title}
+            </button>
+          ))}
+        </nav>
+        {section === 'cashback' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm">
+              <p className="font-bold">Le cashback fait partie des avantages du pack, pas du prix.</p>
+              <p className="mt-1 text-[var(--color-text-muted)]">Consommateur : bonus calculé à l'achat du pack, puis réparti sur sa durée. Personnel : bonus sur chaque rechargement. Vendeur et Marchand : aucun cashback. Le prix FCFA reste inchangé.</p>
+            </div>
+            <CashbackCard />
+          </div>
+        )}
+        {section === 'conditions' && (
+          <div className="space-y-5">
+            {superadmin && <MembershipFees superadmin={superadmin}/>}
+            <div className="rounded-2xl border border-[var(--color-border)] p-5">
+              <p className="text-base font-extrabold">Limite de packs et autres règles générales</p>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">Jusqu'à deux packs structurés actifs par membre selon la politique actuelle. Personnel est exclu de cette limite. Les règles sont versionnées et modifiables sous contrôle des permissions.</p>
+              <Link to="/admin/configuration?group=packs" className="mt-3 inline-flex text-sm font-bold text-[var(--color-primary)]">Ouvrir les règles avancées et leur historique ↗</Link>
+            </div>
+          </div>
+        )}
+        {section === 'formules' && (
+          <>
+          <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm">
+            <p className="font-bold">Comment configurer une formule ?</p>
+            <p className="mt-1 text-[var(--color-text-muted)]">Choisissez un pack existant → « Paramétrer » → renseignez le prix, les YEM et la durée → enregistrez en brouillon ou publiez. Les conditions avancées sont facultatives. Les nouveaux membres verront uniquement les versions publiées.</p>
+          </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { label: 'Formules du catalogue', value: counts.total },
@@ -408,14 +449,9 @@ export default function PacksPage() {
             )
           })}
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] p-4 text-sm">
-          <p className="flex items-center gap-2 font-bold"><Layers3 size={18}/> Règles de souscription</p>
-          <p className="mt-1 text-[var(--color-text-muted)]">Deux packs structurés actifs au maximum par défaut ; le pack Personnel est exclu de cette limite. Ces règles sont modifiables dans Configuration. Le cashback YEM se configure séparément dans « Cashback & pays ». Aucun tarif historique n’est écrasé.</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold">
-            <Link to="/admin/configuration?group=packs" className="text-[var(--color-primary)]">Règles et limite des packs ↗</Link>
-            <Link to="/admin/cashback" className="flex items-center gap-1 text-[var(--color-primary)]"><BadgePercent size={14}/> Cashback ↗</Link>
-          </div>
-        </div>
+          </>
+        )}
+
       </div>
       {creating && (
         <FormDialog title="Créer une formule" subtitle="La formule sera créée en brouillon. Configurez ensuite ses conditions et publiez-les après vérification."
