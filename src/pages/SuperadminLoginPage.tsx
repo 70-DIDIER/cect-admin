@@ -188,8 +188,15 @@ export default function SuperadminLoginPage() {
           )}
           {stage === 'login-code' && (
             <form className="space-y-4" onSubmit={(event) => submit(event, async () => {
-              const next = await post<{ status: string; challenge_id: string }>('/superadmin/login/verify', { challenge_id: challengeId, code })
-              setChallengeId(next.challenge_id); setCodes(['', '', '']); setStage('rotate-codes')
+              const result = await post<{ status: 'authenticated' | 'rotation_otp_required'; challenge_id?: string }>('/superadmin/login/verify', { challenge_id: challengeId, code })
+              if (result.status === 'authenticated') {
+                await completeAccess()
+                return
+              }
+              if (!result.challenge_id) throw new Error('Réponse de vérification inattendue.')
+              setChallengeId(result.challenge_id)
+              setCodes(['', '', ''])
+              setStage('rotate-codes')
             })}>
               <p className="text-sm text-[var(--color-text-muted)]">Le <strong>même code</strong> a été envoyé aux trois adresses e-mail. Saisissez-le une seule fois.</p>
               <label className="block text-sm font-semibold">Code unique
@@ -204,7 +211,7 @@ export default function SuperadminLoginPage() {
               <p className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-3 text-sm">Attention : après activation, votre ancien fichier sera révoqué. Vérifiez que le nouveau est bien sauvegardé avant de continuer.</p>
               <button type="button" onClick={() => downloadKeyFile(pendingKey)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 font-semibold"><Download size={18} /> Télécharger de nouveau ma clé</button>
               <button disabled={busy} type="button" onClick={() => void run(() => prove(pendingKey))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60"><RotateCcw size={18} /> J'ai sauvegardé la clé — Activer</button>
-              <p className="text-xs text-[var(--color-text-muted)]">Validité maximale configurée : {validityDays} jours. La clé est remplacée après chaque connexion réussie.</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Validité maximale configurée : {validityDays} jours. La clé reste valide jusqu’à son expiration ou son renouvellement volontaire.</p>
             </div>
           )}
         </section>
