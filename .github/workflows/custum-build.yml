@@ -1,0 +1,28 @@
+name: CECT Admin / Build custum
+
+on:
+  push:
+    branches: [custum]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout custum
+        uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Typecheck and build the SuperAdmin
+        env:
+          VITE_API_URL: https://api.13-49-203-235.sslip.io
+          VITE_SUPERADMIN_PATH_MODE: 'true'
+        run: npm run build
