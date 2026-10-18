@@ -50,7 +50,7 @@ const router = createBrowserRouter([
       { path: 'paiements', element: <S><PaiementsPage /></S> },
       { path: 'membres', element: <S><MembresPage /></S> },
       { path: 'packs', element: <S><PacksPage /></S> },
-      { path: 'cashback', element: <Navigate to="/admin/packs?section=cashback" replace /> },
+      { path: 'cashback', element: <Navigate to="/admin/packs?family=CONSOMMATEUR" replace /> },
       { path: 'pays', element: <S><CashbackPage /></S> },
       { path: 'equipe', element: <S><EquipePage /></S> },
       { path: 'configuration', element: <S><ConfigurationPage /></S> },
