@@ -2,11 +2,10 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 
-const LoginPage = lazy(() => import('@/pages/LoginPage'))
+const StaffLoginPage = lazy(() => import('@/pages/StaffLoginPage'))
 const SuperadminLoginPage = lazy(() => import('@/pages/SuperadminLoginPage'))
 const SuperadminSecurityPage = lazy(() => import('@/pages/admin/SuperadminSecurityPage'))
 const SuperadminGovernancePage = lazy(() => import('@/pages/admin/SuperadminGovernancePage'))
-const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const MembresPage = lazy(() => import('@/pages/admin/MembresPage'))
 const ValidationsPage = lazy(() => import('@/pages/admin/ValidationsPage'))
@@ -37,9 +36,10 @@ function S({ children }: { children: React.ReactNode }) {
 
 const router = createBrowserRouter([
   { path: '/', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/admin'} replace /> },
-  { path: '/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : <S><LoginPage /></S> },
+  { path: '/connexion', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/equipe/connexion'} replace /> },
+  { path: '/equipe/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : <S><StaffLoginPage /></S> },
   { path: '/superadmin/connexion', element: ALLOW_SUPERADMIN_ENTRY ? <S><SuperadminLoginPage /></S> : <Navigate to="/connexion" replace /> },
-  { path: '/activation', element: <S><ActivationPage /></S> },
+  { path: '/activation', element: <Navigate to="/equipe/connexion" replace /> },
   {
     path: '/admin',
     element: <AdminLayout />,
