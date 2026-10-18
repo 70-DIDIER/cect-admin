@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Archive, BadgePercent, CircleCheck, CirclePause, Copy, FileClock, FilePlus2,
-  Layers3, Plus, Search, ShieldCheck, SlidersHorizontal, X,
+  Layers3, Pencil, Plus, Search, ShieldCheck, SlidersHorizontal, X,
 } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { Panel } from '@/components/dashboard/Panel'
@@ -307,6 +307,7 @@ export default function PacksPage() {
   const [details, setDetails] = useState<Plan | null>(null)
   const [creating, setCreating] = useState(false)
   const [duplicating, setDuplicating] = useState<Plan | null>(null)
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
   const mayManage = can('packs.manage')
   const superadmin = user?.role === 'superadmin' && can('settings.update_critical')
   const query = useQuery({
@@ -393,6 +394,9 @@ export default function PacksPage() {
                   {mayManage && !['archived', 'retired'].includes(plan.status) && (
                     <GhostButton onClick={() => setVersionTarget(plan)}><FilePlus2 size={14}/> Paramétrer</GhostButton>
                   )}
+                  {mayManage && plan.status !== 'archived' && (
+                    <GhostButton onClick={() => setEditingPlan(plan)}><Pencil size={14}/> Modifier la fiche</GhostButton>
+                  )}
                   {mayManage && (
                     <GhostButton onClick={() => setDuplicating(plan)}><Copy size={14}/> Dupliquer</GhostButton>
                   )}
@@ -438,6 +442,27 @@ export default function PacksPage() {
       )}
       {versionTarget && <VersionDialog plan={versionTarget} close={() => setVersionTarget(null)} changed={refresh}/>}
       {details && <VersionHistory plan={details} close={() => setDetails(null)} changed={refresh} manage={mayManage}/>}
+      {editingPlan && (
+        <FormDialog title={'Modifier la fiche ' + editingPlan.code}
+          subtitle="Seuls le nom, la description et le niveau changent. Les prix et quotas passent toujours par de nouvelles versions."
+          submitLabel="Enregistrer la fiche" onClose={() => setEditingPlan(null)}
+          fields={[
+            { name: 'name', label: 'Nom commercial', initial: editingPlan.name, required: true },
+            { name: 'level', label: 'Niveau de formule', type: 'number', initial: editingPlan.level === null ? '' : String(editingPlan.level) },
+            { name: 'description', label: 'Description', type: 'textarea', initial: editingPlan.description ?? '' },
+            { name: 'reason', label: 'Motif de modification', type: 'textarea', required: true },
+          ]}
+          onSubmit={async values => {
+            await put('/admin/packs/plans/' + editingPlan.id, {
+              name: values.name.trim(),
+              level: values.level.trim() ? Number(values.level) : null,
+              description: values.description.trim() || null,
+              reason: values.reason,
+            }, newIdempotencyKey())
+            await refresh()
+          }}
+        />
+      )}
       {duplicating && (
         <FormDialog title="Dupliquer la formule" subtitle={'Créer une copie de ' + duplicating.code + ' comme nouveau brouillon.'}
           submitLabel="Dupliquer" onClose={() => setDuplicating(null)}
