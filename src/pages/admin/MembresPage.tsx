@@ -57,6 +57,7 @@ const STATUS_FILTERS = [
   { value: 'active', label: 'Actifs' },
   { value: 'pending_payment', label: 'À payer' },
   { value: 'suspended', label: 'Suspendus' },
+  { value: 'closed', label: 'Clôturés (archives)' },
 ]
 
 const OPERATION_STATUS: Record<string, string> = {
