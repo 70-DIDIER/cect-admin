@@ -49,10 +49,12 @@ function Staff({ roles }: { roles: Role[] }) {
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<StaffMember | null>(null)
+  const [editingHours, setEditingHours] = useState<StaffMember | null>(null)
   const [toggling, setToggling] = useState<StaffMember | null>(null)
   const query = useQuery({ queryKey: ['staff'], queryFn: () => getRaw<{ data: StaffMember[] }>('/admin/staff', { per_page: 100 }), staleTime: 0 })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['staff'] })
   const manage = can('staff.manage')
+  const scheduleManager = manage && can('settings.update_critical')
   const label = (name: string) => roles.find((role) => role.name === name)?.label ?? name
   const assignableRoles = roles.filter((role) => role.name !== 'superadmin' && role.name !== 'validateur')
 
@@ -97,6 +99,11 @@ function Staff({ roles }: { roles: Role[] }) {
                   <GhostButton onClick={() => setEditing(member)} aria-label={`Modifier les rôles de ${member.first_name}`}>
                     <Pencil size={14} aria-hidden /> Rôles
                   </GhostButton>
+                  {scheduleManager && member.roles.every(role => role !== 'superadmin') && (
+                    <GhostButton onClick={() => setEditingHours(member)}>
+                      <KeyRound size={14} aria-hidden /> Horaires
+                    </GhostButton>
+                  )}
                   <GhostButton onClick={() => setToggling(member)} aria-label={member.status === 'suspended' ? 'Réactiver' : 'Suspendre'}>
                     {member.status === 'suspended' ? <UserCheck size={14} aria-hidden /> : <UserX size={14} aria-hidden />}
                     {member.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
@@ -109,6 +116,7 @@ function Staff({ roles }: { roles: Role[] }) {
       </Panel>
 
       {creating && <CreateStaff roles={assignableRoles} onClose={() => setCreating(false)} onDone={refresh} />}
+      {editingHours && <StaffHoursDialog member={editingHours} onClose={() => setEditingHours(null)}/>}
       {editing && (
         <CheckListDialog
           title="Rôles du compte"
@@ -141,12 +149,56 @@ function Staff({ roles }: { roles: Role[] }) {
   )
 }
 
+function StaffHoursDialog({ member, onClose }: { member: StaffMember; onClose: () => void }) {
+  const query = useQuery({
+    queryKey: ['staff-hours', member.id],
+    queryFn: () => get<{ enabled: boolean; weekdays: number[]; start_time: string; end_time: string; timezone: string }>(`/admin/staff/${member.id}/login-hours`),
+  })
+  if (query.isPending) return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><LoadingBlock/></div>
+  if (query.isError) return (
+    <div role="alert" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-8">
+      <div className="rounded-2xl bg-[var(--dash-card)] p-6"><ErrorLine message="Impossible de charger les horaires du collaborateur."/>
+        <button onClick={onClose} className="mt-4 underline">Fermer</button>
+      </div>
+    </div>
+  )
+  return <FormDialog
+    title={`Horaires autorisés · ${member.first_name} ${member.last_name}`}
+    subtitle="Heures locales du Togo (Africa/Lome). Les connexions et opérations hors plage sont bloquées côté serveur. Aucun horaire n'est appliqué lorsque la restriction est désactivée."
+    submitLabel="Enregistrer les horaires" onClose={onClose}
+    fields={[
+      { name: 'enabled', label: 'Restreindre les heures de connexion', type: 'select',
+        initial: query.data.enabled ? 'yes' : 'no', options: [
+          { value: 'no', label: 'Non · accès à toute heure' },
+          { value: 'yes', label: 'Oui · respecter les horaires définis' },
+        ] },
+      { name: 'days', label: 'Jours autorisés', showWhen: { name: 'enabled', value: 'yes' }, required: true,
+        initial: query.data.weekdays.join(','), hint: '1 = lundi, 2 = mardi, …, 7 = dimanche. Exemple : 1,2,3,4,5.' },
+      { name: 'start_time', label: 'Heure de début (HH:MM)', showWhen: { name: 'enabled', value: 'yes' },
+        initial: query.data.start_time, required: true },
+      { name: 'end_time', label: 'Heure de fin (HH:MM)', showWhen: { name: 'enabled', value: 'yes' },
+        initial: query.data.end_time, required: true },
+      { name: 'reason', label: 'Motif obligatoire', type: 'textarea', required: true },
+    ]}
+    onSubmit={async values => {
+      const weekdays = values.days.split(',').map(x => Number(x.trim()))
+      if (!weekdays.length || weekdays.some(d => !Number.isInteger(d) || d < 1 || d > 7) || new Set(weekdays).size !== weekdays.length) {
+        throw new Error('Jours invalides. Utilisez une liste comme 1,2,3,4,5.')
+      }
+      await put(`/admin/staff/${member.id}/login-hours`, {
+        enabled: values.enabled === 'yes', weekdays,
+        start_time: values.start_time, end_time: values.end_time, reason: values.reason,
+      }, newIdempotencyKey())
+    }}
+  />
+}
+
 function CreateStaff({ roles, onClose, onDone }: { roles: Role[]; onClose: () => void; onDone: () => Promise<unknown> }) {
   const [key] = useState(newIdempotencyKey)
   return (
     <FormDialog
       title="Nouveau compte interne"
-      subtitle="La personne reçoit un code d’activation par e-mail (valable 24 h). Elle l’utilise sur la page « Activer mon compte » de la connexion pour choisir son mot de passe."
+      subtitle="Le compte Administrateur ou Comptabilité est opérationnel dès sa création. Pour se connecter, l’employé renseigne son e-mail sur /equipe/connexion ; le code sera envoyé aux trois adresses de sécurité du SuperAdmin."
       submitLabel="Créer le compte"
       fields={[
         { name: 'first_name', label: 'Prénom', required: true },
