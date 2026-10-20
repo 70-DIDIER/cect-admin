@@ -26,7 +26,7 @@ export default function SuperadminSecurityPage() {
       <p className="text-sm text-[var(--color-text-muted)]">Les trois adresses e-mail ont été configurées à la première connexion. Tout changement est confirmé sur les nouvelles boîtes.</p></header>
     {query.isError && <p role="alert">Impossible de vérifier la session de sécurité mTLS.</p>}
     {error && <p role="alert" className="text-red-600">{error}</p>}
-    {query.data && <p className="text-sm">Durée de validité maximale du fichier : {query.data.key_validity_days} jours (rotation à chaque connexion).</p>}
+    {query.data && <p className="text-sm">Durée de validité maximale du fichier : {query.data.key_validity_days} jours. Renouvellement uniquement en cas de perte, d’expiration ou de demande de sécurité.</p>}
     <form className="space-y-4 rounded-2xl border border-[var(--color-border)] p-5" onSubmit={(e) => void run(e, async () => {
       if (!challenge) {
         const result = await post<{challenge_id:string}>('/superadmin/emails/start', { emails: values })
