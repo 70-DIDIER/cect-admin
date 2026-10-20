@@ -27,6 +27,7 @@ export default function SuperadminLoginPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [validityDays, setValidityDays] = useState(30)
+  const [passphrase, setPassphrase] = useState('')
 
   useEffect(() => {
     let active = true
@@ -52,7 +53,8 @@ export default function SuperadminLoginPage() {
 
   async function prove(key: SuperadminKeyFile) {
     const proof = await post<Challenge & { nonce: string }>('/superadmin/key/challenge', { key_id: key.key_id })
-    const signature = await signChallenge(key, proof.challenge_id, proof.nonce)
+    // Decrypt locally only; the API receives a signature, never key material or a passphrase.
+    const signature = await signChallenge(key, proof.challenge_id, proof.nonce, passphrase)
     const result = await post<ProofResponse>('/superadmin/key/prove', { challenge_id: proof.challenge_id, signature })
     if (result.status === 'authenticated') { await completeAccess(); return }
     if (!result.challenge_id) throw new Error('Code de vérification non reçu.')
@@ -62,7 +64,7 @@ export default function SuperadminLoginPage() {
 
   async function initialEnrollment(codesToSend: string[]) {
     if (!keyFile) throw new Error('Importe la clé .cectkey reçue dans ton kit de démonstration.')
-    const publicKey = await publicPemFromKeyFile(keyFile)
+    const publicKey = await publicPemFromKeyFile(keyFile, passphrase)
     const response = await post<KeyResponse>('/superadmin/enroll/finish', {
       challenge_id: challengeId, codes: codesToSend,
       public_key_pem: publicKey, key_id: keyFile.key_id,
@@ -73,12 +75,28 @@ export default function SuperadminLoginPage() {
   }
 
   async function prepareNewKey(path: string, codesToSend: string[]) {
+    if (passphrase.length < 14) throw new Error('Choisissez une phrase secrète d’au moins 14 caractères pour chiffrer la nouvelle clé.')
     const keys = await createKeyMaterial()
     const result = await post<KeyResponse>(path, { challenge_id: challengeId, codes: codesToSend, public_key_pem: keys.public_key_pem })
-    const file = createKeyFile(result.key_id, keys.private_key_pkcs8)
+    const file = await createKeyFile(result.key_id, keys.private_key_pkcs8, passphrase)
     setPendingKey(file)
     downloadKeyFile(file)
     setStage('activate')
+  }
+
+  async function protectLegacyKey() {
+    if (!keyFile || keyFile.version !== 1) return
+    const secured = await createKeyFile(keyFile.key_id, keyFile.private_key_pkcs8, passphrase)
+    downloadKeyFile(secured)
+    setKeyFile(secured)
+  }
+
+  function secretInput(label: string) {
+    return <label className="block space-y-2 text-sm font-semibold">{label}
+      <input type="password" autoComplete="off" className={input}
+        value={passphrase} onChange={(event) => setPassphrase(event.target.value)}
+        placeholder="Phrase secrète personnelle (14 caractères minimum)" />
+    </label>
   }
 
   function submit(event: FormEvent, action: () => Promise<void>) {
@@ -144,6 +162,8 @@ export default function SuperadminLoginPage() {
                   }} />
               </label>
               {keyFile && <p role="status" className="text-sm text-[var(--color-primary)]">Clé CECT valide : fichier .cectkey chargé.</p>}
+              {secretInput('Phrase secrète de la clé chiffrée (si applicable)')}
+              {keyFile?.version === 1 && <button type="button" disabled={busy || passphrase.length < 14} onClick={() => void run(protectLegacyKey)} className="w-full rounded-xl border border-amber-600 px-4 py-3 text-sm font-bold">Protéger mon ancienne clé : créer une copie chiffrée</button>}
               {emails.map((value, i) => <label className="block text-sm font-semibold" key={i}>E-mail {i + 1}
                 <input type="email" autoComplete="off" required className={`${input} mt-1`} value={value} onChange={(e) => updateEmail(i, e.target.value)} />
               </label>)}
@@ -156,10 +176,11 @@ export default function SuperadminLoginPage() {
               : prepareNewKey(stage === 'rotate-codes' ? '/superadmin/rotate/finish' : '/superadmin/recover/finish', codes)
             )}>
               <p className="text-sm text-[var(--color-text-muted)]"><MailCheck className="mr-2 inline" size={18} />Trois codes <strong>différents</strong> ont été envoyés. Saisissez les trois pour autoriser la génération d'une nouvelle clé.</p>
+              {stage !== 'enroll-codes' && secretInput('Phrase secrète de la nouvelle clé (14 caractères minimum)')}
               {codes.map((value, i) => <label className="block text-sm font-semibold" key={i}>Code de l'e-mail {i + 1}
                 <input className={`${input} mt-1`} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required value={value} onChange={(e) => updateCode(i, e.target.value)} autoComplete="one-time-code" />
               </label>)}
-              <button disabled={busy || codes.some((c) => c.length !== 6)} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">{stage === 'enroll-codes' ? 'Valider les codes et activer ma clé' : 'Valider et créer une nouvelle clé'}</button>
+              <button disabled={busy || codes.some((c) => c.length !== 6) || (stage !== 'enroll-codes' && passphrase.length < 14)} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">{stage === 'enroll-codes' ? 'Valider les codes et activer ma clé' : 'Valider et créer une nouvelle clé'}</button>
             </form>
           )}
           {stage === 'select-key' && (
@@ -178,7 +199,10 @@ export default function SuperadminLoginPage() {
                     .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Clé non valide.'))
                 }} />
               </label>
-              <button disabled={!keyFile || busy} onClick={() => keyFile && void run(() => prove(keyFile))} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">Vérifier ma clé et recevoir mon code</button>
+              {secretInput('Phrase secrète du fichier (requise pour les nouvelles clés)')}
+              {keyFile?.version === 1 && <p className="rounded-xl border border-amber-600/50 p-3 text-sm">Ancien fichier non chiffré : créez une copie chiffrée avant votre prochaine connexion, puis supprimez l'ancienne copie.</p>}
+              {keyFile?.version === 1 && <button type="button" disabled={busy || passphrase.length < 14} onClick={() => void run(protectLegacyKey)} className="w-full rounded-xl border border-amber-600 px-4 py-3 text-sm font-bold">Télécharger une copie chiffrée de ma clé existante</button>}
+              <button disabled={!keyFile || busy || (keyFile.version === 2 && !passphrase)} onClick={() => keyFile && void run(() => prove(keyFile))} className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60">Vérifier ma clé et recevoir mon code</button>
               <button type="button" className="w-full text-sm font-semibold underline" disabled={busy}
                 onClick={() => void run(async () => {
                   const challenge = await post<Challenge>('/superadmin/recover/start')
@@ -207,15 +231,16 @@ export default function SuperadminLoginPage() {
           )}
           {stage === 'activate' && pendingKey && (
             <div className="space-y-4">
-              <p className="text-sm">Votre nouveau fichier <strong>.cectkey</strong> a été préparé. Sauvegardez-le dans un emplacement chiffré et distinct de vos autres identifiants.</p>
+              <p className="text-sm">Votre nouveau fichier <strong>.cectkey</strong> est chiffré par votre phrase secrète. Sauvegardez ce fichier et conservez la phrase secrète séparément : elle n'est pas récupérable par la CECT.</p>
+              {secretInput('Phrase secrète utilisée pour chiffrer la clé')}
               <p className="rounded-xl border border-amber-600/40 bg-amber-500/10 p-3 text-sm">Attention : après activation, votre ancien fichier sera révoqué. Vérifiez que le nouveau est bien sauvegardé avant de continuer.</p>
               <button type="button" onClick={() => downloadKeyFile(pendingKey)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-3 font-semibold"><Download size={18} /> Télécharger de nouveau ma clé</button>
-              <button disabled={busy} type="button" onClick={() => void run(() => prove(pendingKey))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60"><RotateCcw size={18} /> J'ai sauvegardé la clé — Activer</button>
+              <button disabled={busy || (pendingKey.version === 2 && !passphrase)} type="button" onClick={() => void run(() => prove(pendingKey))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-60"><RotateCcw size={18} /> J'ai sauvegardé la clé — Activer</button>
               <p className="text-xs text-[var(--color-text-muted)]">Validité maximale configurée : {validityDays} jours. La clé reste valide jusqu’à son expiration ou son renouvellement volontaire.</p>
             </div>
           )}
         </section>
-        <p className="text-center text-xs text-[var(--color-text-muted)]">La clé privée reste dans votre navigateur. Ne la transmettez jamais par e-mail ou messagerie.</p>
+        <p className="text-center text-xs text-[var(--color-text-muted)]">La clé privée n'est jamais transmise à l'API. Les nouveaux fichiers sont chiffrés localement. Ne communiquez ni votre fichier ni sa phrase secrète.</p>
       </div>
     </div>
   )
