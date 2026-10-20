@@ -39,7 +39,7 @@ interface Report {
     pending_amount_xof: number
     yem_in_circulation: string
   }
-  yem_activity: { sold_to_cect: string; sold_to_cect_xof: number; paid_to_merchants: string; merchant_payments: number; redeemed_by_merchants: string; redeemed_by_merchants_xof: number; active_merchants: number }
+  yem_activity: { sold_to_cect: string; sold_to_cect_xof: number; paid_to_merchants: string; merchant_payments: number; redeemed_by_merchants: string; redeemed_by_merchants_xof: number; merchant_management_fees_xof: number; active_merchants: number }
   by_source: Breakdown[]
   by_method: Breakdown[]
   top_members: { user_id: string; name: string; member_number: string | null; pernum: string | null; amount_xof: number; count: number; share_bps: number }[]
@@ -139,6 +139,7 @@ function ReportView() {
                   ['Vendus à la CECT', `${formatYem(data.yem_activity.sold_to_cect)} · ${formatXof(data.yem_activity.sold_to_cect_xof)}`],
                   ['Payés aux marchands', `${formatYem(data.yem_activity.paid_to_merchants)} · ${data.yem_activity.merchant_payments} paiement(s)`],
                   ['Rééchangés par les marchands', `${formatYem(data.yem_activity.redeemed_by_merchants)} · ${formatXof(data.yem_activity.redeemed_by_merchants_xof)}`],
+                  ['Frais de gestion Marchands', formatXof(data.yem_activity.merchant_management_fees_xof ?? 0)],
                   ['Marchands actifs', String(data.yem_activity.active_merchants)],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-4">
