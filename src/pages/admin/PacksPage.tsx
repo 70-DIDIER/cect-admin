@@ -435,6 +435,18 @@ export default function PacksPage() {
             </div>
           ))}
         </div>
+        {family === 'MARCHAND' && (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-4 sm:p-5">
+            <h3 className="font-extrabold">Comment la CECT rachète les YEM aux Marchands ?</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+              Le SuperAdmin peut choisir un taux fixe ou le cours de vente diminué de frais de gestion.
+              Cette politique s'applique aux nouvelles demandes ; chaque pack garde ses droits et ses plafonds indépendants.
+            </p>
+            <Link to="/admin/configuration?group=rates" className="mt-3 inline-flex rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-white">
+              Gérer les cours et les frais Marchands
+            </Link>
+          </div>
+        )}
         <nav aria-label="Familles de packs" className="flex flex-wrap gap-2">
           {Object.entries(FAMILIES).map(([code, meta]) => (
             <button type="button" key={code} aria-pressed={family === code} onClick={() => { setFamily(code); setShowArchives(false); }}
