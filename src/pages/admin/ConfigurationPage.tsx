@@ -31,6 +31,13 @@ interface Setting {
   current_value: unknown
 }
 
+interface MerchantPricingPolicy {
+  mode: 'fixed' | 'sale_minus_fee'
+  fee_bps: number
+  fixed_fee_xof: number
+  fee_rounding: 'down' | 'up'
+}
+
 const GROUP_LABELS: Record<string, string> = {
   membership: 'Adhésion',
   organization: 'Organisation',
@@ -53,6 +60,12 @@ function displayValue(setting: Setting): string {
   if (setting.is_sensitive) return '••••••••'
   if (value === null || value === undefined) return 'Non défini'
   if (typeof value === 'boolean') return value ? 'Oui' : 'Non'
+  if (setting.key === 'merchant_redemption.pricing' && value && typeof value === 'object') {
+    const p = value as MerchantPricingPolicy
+    return p.mode === 'sale_minus_fee'
+      ? `Cours de vente − ${(p.fee_bps / 100).toLocaleString('fr-FR')} % de frais${p.fixed_fee_xof ? ` − ${p.fixed_fee_xof} FCFA` : ''}`
+      : 'Taux fixe Marchand (cours paramétrable)'
+  }
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -90,6 +103,18 @@ export default function ConfigurationPage() {
   const query = useQuery({ queryKey: ['settings'], queryFn: () => get<Setting[]>('/admin/settings'), staleTime: 0 })
 
   const groups = useMemo(() => [...new Set((query.data ?? []).map((setting) => setting.group))], [query.data])
+  const merchantSetting = (query.data ?? []).find(item => item.key === 'merchant_redemption.pricing')
+  const policy = merchantSetting?.current_value as MerchantPricingPolicy | undefined
+  const saleRate = Number((query.data ?? []).find(item => item.key === 'rates.sale_xof_per_yem')?.current_value ?? 0)
+  const merchantRate = Number((query.data ?? []).find(item => item.key === 'rates.transfer_xof_per_yem')?.current_value ?? 0)
+  const referenceYem = 100
+  const pricingGross = referenceYem * (policy?.mode === 'sale_minus_fee' ? saleRate : merchantRate)
+  const percentageFee = policy?.mode === 'sale_minus_fee' ? pricingGross * (policy.fee_bps / 10000) : 0
+  const pricingFee = policy?.mode === 'sale_minus_fee'
+    ? Math.min(pricingGross, (policy.fee_rounding === 'up' ? Math.ceil(percentageFee) : Math.floor(percentageFee)) + policy.fixed_fee_xof)
+    : 0
+  const pricingNet = Math.max(0, pricingGross - pricingFee)
+
   const visible = (query.data ?? []).filter((setting) => {
     // Global cashback is retained only for packs published before per-pack
     // policies existed. New cashback is edited in the eligible pack wizard.
@@ -148,6 +173,55 @@ export default function ConfigurationPage() {
           </button>
         </div>
 
+        {merchantSetting && (
+          <section className="rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-primary)]">Gestion financière • SuperAdmin</p>
+                <h2 className="mt-1 text-lg font-extrabold">Politique de rachat des YEM Marchands</h2>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                  Deux méthodes possibles, entièrement modifiables : taux de cession fixe, ou cours de vente diminué de frais de gestion.
+                  Les taux se règlent ci-dessous dans « Cours et taux » et les modifications restent historisées.
+                </p>
+              </div>
+              {canEdit(merchantSetting) && (
+                <button type="button" onClick={() => setEditing(merchantSetting)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-white">
+                  <Pencil size={16} /> Modifier le modèle
+                </button>
+              )}
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-[var(--dash-bg)] p-4">
+                <p className="text-xs text-[var(--color-text-muted)]">Modèle actuel</p>
+                <p className="mt-1 text-sm font-extrabold">{policy?.mode === 'sale_minus_fee' ? 'Cours de vente moins frais' : 'Taux fixe Marchand'}</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{policy?.mode === 'sale_minus_fee'
+                  ? `${(policy.fee_bps / 100).toLocaleString('fr-FR')} % de frais + ${policy.fixed_fee_xof.toLocaleString('fr-FR')} FCFA fixes`
+                  : `${merchantRate.toLocaleString('fr-FR')} FCFA par YEM`}</p>
+              </div>
+              <div className="rounded-2xl bg-[var(--dash-bg)] p-4">
+                <p className="text-xs text-[var(--color-text-muted)]">Exemple pour 100 YEM reçus</p>
+                <p className="mt-1 text-xl font-extrabold">{pricingGross.toLocaleString('fr-FR')} FCFA</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Frais retenus : {pricingFee.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+              <div className="rounded-2xl bg-[var(--dash-bg)] p-4">
+                <p className="text-xs text-[var(--color-text-muted)]">Net à régler au Marchand</p>
+                <p className="mt-1 text-xl font-extrabold text-[var(--color-primary)]">{pricingNet.toLocaleString('fr-FR')} FCFA</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Estimation calculée avec les paramètres actuels</p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => { setGroup('rates'); setSearch('rates.transfer_xof_per_yem') }}
+                className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-xs font-semibold">Modifier le taux Marchand</button>
+              <button type="button" onClick={() => { setGroup('rates'); setSearch('rates.sale_xof_per_yem') }}
+                className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-xs font-semibold">Modifier le cours de vente</button>
+              <button type="button" onClick={() => setHistory(merchantSetting)}
+                className="inline-flex items-center gap-1 rounded-xl border border-[var(--color-border)] px-3 py-2 text-xs font-semibold"><History size={14}/> Historique et décisions</button>
+            </div>
+            <p className="mt-3 text-xs text-[var(--color-text-muted)]">Les opérations déjà créées conservent leur modèle, leur cours et leurs frais d’origine.</p>
+          </section>
+        )}
+
         <Panel title="Paramètres" subtitle={`${visible.length} paramètre(s)`} flush>
           {query.isPending && <div className="mx-5 mb-4 h-32 animate-pulse rounded-2xl bg-[var(--chart-track)]" />}
           {query.isError && <p role="alert" className="px-6 pb-4 text-sm">Impossible de charger les paramètres.</p>}
@@ -190,21 +264,58 @@ export default function ConfigurationPage() {
 
 function SettingDialog({ setting, onClose, onSaved }: { setting: Setting; onClose: () => void; onSaved: () => Promise<void> }) {
   const [key] = useState(newIdempotencyKey)
+  const isMerchant = setting.key === 'merchant_redemption.pricing'
+  const policy = (setting.current_value ?? {}) as Partial<MerchantPricingPolicy>
+  const fields: FormField[] = isMerchant ? [
+    { name: 'mode', label: 'Comment rémunérer les Marchands ?', type: 'select', required: true,
+      initial: policy.mode ?? 'fixed', options: [
+        { value: 'fixed', label: 'Taux fixe défini par le SuperAdmin' },
+        { value: 'sale_minus_fee', label: 'Cours de vente CECT moins frais de gestion' },
+      ] },
+    { name: 'fee_percent', label: 'Frais de gestion (%)', type: 'number', step: '0.01', required: true,
+      initial: String((policy.fee_bps ?? 0) / 100), showWhen: { name: 'mode', value: 'sale_minus_fee' },
+      hint: '3 signifie 3 %. Le taux de base est le cours de vente paramétré dans Cours et taux.' },
+    { name: 'fixed_fee_xof', label: 'Frais de gestion fixes supplémentaires (FCFA)', type: 'number', required: true,
+      initial: String(policy.fixed_fee_xof ?? 0), showWhen: { name: 'mode', value: 'sale_minus_fee' } },
+    { name: 'fee_rounding', label: 'Arrondi des frais en FCFA', type: 'select',
+      initial: policy.fee_rounding ?? 'down', showWhen: { name: 'mode', value: 'sale_minus_fee' }, options: [
+        { value: 'down', label: 'À l’inférieur (moins de frais pour le Marchand)' },
+        { value: 'up', label: 'Au supérieur' },
+      ] },
+    { name: 'reason', label: 'Motif du changement (obligatoire)', type: 'textarea', required: true },
+    { name: 'effective_from', label: 'Date d’entrée en vigueur (facultatif)', type: 'date' },
+  ] : [
+    fieldFor(setting),
+    { name: 'reason', label: 'Motif (5 caractères minimum)', type: 'textarea', required: true },
+    { name: 'effective_from', label: 'Date d’entrée en vigueur (facultatif)', type: 'date' },
+  ]
   return (
     <FormDialog
-      title="Modifier le paramètre"
-      subtitle={setting.key}
+      title={isMerchant ? 'Modifier la politique de rachat Marchand' : 'Modifier le paramètre'}
+      subtitle={isMerchant ? 'La nouvelle politique ne s’appliquera qu’aux nouvelles demandes.' : setting.key}
       submitLabel="Enregistrer"
-      fields={[
-        fieldFor(setting),
-        { name: 'reason', label: 'Motif (5 caractères minimum)', type: 'textarea', required: true },
-        { name: 'effective_from', label: 'Date d’entrée en vigueur (facultatif)', type: 'date' },
-      ]}
+      fields={fields}
       onClose={onClose}
       onSubmit={async (values) => {
         let value: unknown
         try {
-          value = parseValue(setting, values.value ?? '')
+          if (isMerchant) {
+            const percent = values.mode === 'sale_minus_fee' ? Number(values.fee_percent) : 0
+            const fixedFee = values.mode === 'sale_minus_fee' ? Number(values.fixed_fee_xof) : 0
+            if (!Number.isFinite(percent) || percent < 0 || percent > 99.99
+              || !Number.isInteger(Math.round(percent * 100)) || !/^\d{1,2}(\.\d{1,2})?$/.test(String(percent))
+              || !Number.isSafeInteger(fixedFee) || fixedFee < 0 || fixedFee > 10000000) {
+              throw new Error('Saisissez un pourcentage de 0 à 99,99 et des frais fixes compris entre 0 et 10 000 000 FCFA.')
+            }
+            value = {
+              mode: values.mode,
+              fee_bps: Math.round(percent * 100),
+              fixed_fee_xof: fixedFee,
+              fee_rounding: values.mode === 'sale_minus_fee' ? values.fee_rounding : 'down',
+            }
+          } else {
+            value = parseValue(setting, values.value ?? '')
+          }
         } catch {
           throw new Error('Valeur invalide.')
         }
@@ -214,6 +325,7 @@ function SettingDialog({ setting, onClose, onSaved }: { setting: Setting; onClos
       }}
     >
       <p className="text-sm text-[var(--color-text-muted)]">{setting.description}</p>
+      {isMerchant && <p className="rounded-xl bg-[var(--dash-bg)] px-4 py-3 text-xs text-[var(--color-text-muted)]">Le calcul se fait sur la quantité de YEM réellement reçue. Les frais sont prélevés en FCFA lors du rééchange. Chaque version exige une justification du SuperAdmin et ne change pas les contrats existants.</p>}
     </FormDialog>
   )
 }
