@@ -3,11 +3,10 @@
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const path = require('node:path')
-const { randomUUID, webcrypto } = require('node:crypto')
+const { randomUUID } = require('node:crypto')
 const ts = require('typescript')
 const Module = require('node:module')
 
-globalThis.crypto = webcrypto
 const modulePath = path.join(__dirname, '../src/lib/superadminKeys.ts')
 const js = ts.transpileModule(readFileSync(modulePath, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const testModule = new Module(modulePath, module)
