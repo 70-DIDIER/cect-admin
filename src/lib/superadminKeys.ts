@@ -41,7 +41,7 @@ function validatePassphrase(passphrase: string) {
 async function encryptionKey(passphrase: string, salt: Uint8Array, iterations: number) {
   const imported = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: salt.buffer as ArrayBuffer, iterations },
     imported,
     { name: 'AES-GCM', length: 256 },
     false,
