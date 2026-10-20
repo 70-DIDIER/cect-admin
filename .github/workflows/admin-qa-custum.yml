@@ -1,0 +1,25 @@
+name: CECT Admin Build & Cryptography
+
+on:
+  push:
+    branches: [custum]
+  workflow_dispatch:
+
+jobs:
+  admin-ui-crypto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify encrypted SuperAdmin signing keys and legacy migration
+        run: node scripts/test-superadmin-key-crypto.cjs
+      - name: Typecheck and compile demo admin console
+        env:
+          VITE_SUPERADMIN_PATH_MODE: 'true'
+          VITE_STAFF_GUARDIAN_ENABLED: 'false'
+        run: npm run build
