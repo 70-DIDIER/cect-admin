@@ -68,7 +68,7 @@ function toAuthUser(api: ApiUser): AuthUser {
 
 export function homeFor(user: AuthUser): string {
   void user
-  return '/admin'
+  return user.role === 'validateur' ? '/admin/kyc' : '/admin'
 }
 
 interface ChallengeBody {
