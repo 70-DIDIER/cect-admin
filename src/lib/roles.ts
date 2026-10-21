@@ -1,6 +1,6 @@
-export type UserRole = 'utilisateur' | 'administrateur' | 'superadmin' | 'comptabilite'
+export type UserRole = 'utilisateur' | 'administrateur' | 'superadmin' | 'comptabilite' | 'validateur'
 
-const STAFF_PRIORITY: ReadonlyArray<Exclude<UserRole, 'utilisateur'>> = ['superadmin', 'administrateur', 'comptabilite']
+const STAFF_PRIORITY: ReadonlyArray<Exclude<UserRole, 'utilisateur'>> = ['superadmin', 'administrateur', 'validateur', 'comptabilite']
 
 export function isAdminRole(role: UserRole): boolean {
   return role !== 'utilisateur'
