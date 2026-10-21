@@ -13,6 +13,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   administrateur: 'Administrateur',
   superadmin: 'Super-administrateur',
   comptabilite: 'Comptabilité',
+  validateur: 'Validateur KYC',
   utilisateur: 'Membre',
 }
 
@@ -24,6 +25,7 @@ interface AdminNavItem extends NavItem {
 const NAV: AdminNavItem[] = [
   { section: 'Pilotage', to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, permissions: [], tab: true, tabLabel: 'Accueil' },
   { section: 'Pilotage', to: '/admin/gouvernance', label: 'Gouvernance SuperAdmin', icon: ShieldCheck, permissions: ['settings.update_critical'] },
+  { section: 'Opérations', to: '/admin/kyc', label: 'Contrôles KYC', icon: ShieldCheck, permissions: ['kyc.review'], tab: true },
   { section: 'Opérations', to: '/admin/validations', label: 'Validations', icon: CircleCheck, permissions: ['payments.validate_manual', 'yem_validations.view'], tab: true },
   { section: 'Opérations', to: '/admin/finance', label: 'Finance', icon: Landmark, permissions: ['reports.view', 'payouts.view'], tab: true },
   { section: 'Opérations', to: '/admin/paiements', label: 'Paiements', icon: CreditCard, permissions: ['payments.view'] },
@@ -53,7 +55,7 @@ export function AdminLayout() {
 
   const sections = useMemo<NavSection[]>(() => {
     if (!role) return []
-    const visible = NAV.filter((item) => (!['/admin/securite', '/admin/gouvernance'].includes(item.to) || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
+    const visible = NAV.filter((item) => (role !== 'validateur' || item.to === '/admin/kyc') && (!['/admin/securite', '/admin/gouvernance'].includes(item.to) || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
     const titles = [...new Set(visible.map((item) => item.section))]
     return titles.map((title) => ({
       title,
