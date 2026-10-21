@@ -59,6 +59,7 @@ const GREETING_BY_ROLE: Record<UserRole, string> = {
   administrateur: 'Voici l’activité de la coopérative sur la période choisie.',
   superadmin: 'Vue d’ensemble de la plateforme, de l’activité et de la sécurité.',
   comptabilite: 'Suivi des encaissements et des versements dus.',
+  validateur: 'Vérification des identités et contrôle des dossiers KYC.',
   utilisateur: '',
 }
 
