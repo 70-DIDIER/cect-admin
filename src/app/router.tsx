@@ -18,6 +18,7 @@ const PacksPage = lazy(() => import('@/pages/admin/PacksPage'))
 const PaiementsPage = lazy(() => import('@/pages/admin/PaiementsPage'))
 const EquipePage = lazy(() => import('@/pages/admin/EquipePage'))
 const JournalPage = lazy(() => import('@/pages/admin/JournalPage'))
+const CountriesPage = lazy(() => import('@/pages/admin/CashbackPage'))
 
 const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
 const SUPERADMIN_PATH_MODE = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true'
@@ -54,7 +55,7 @@ const router = createBrowserRouter([
       { path: 'membres', element: <S><MembresPage /></S> },
       { path: 'packs', element: <S><PacksPage /></S> },
       { path: 'cashback', element: <Navigate to="/admin/packs?family=CONSOMMATEUR" replace /> },
-      { path: 'pays', element: <Navigate to="/admin/configuration?group=payment" replace /> },
+      { path: 'pays', element: <S><CountriesPage /></S> },
       { path: 'equipe', element: <S><EquipePage /></S> },
       { path: 'configuration', element: <S><ConfigurationPage /></S> },
       { path: 'securite', element: <S><SuperadminSecurityPage /></S> },
