@@ -16,9 +16,11 @@ interface Summary {
   person: { name: string; email: string; person_type: string; member_number: string | null }
   documents: { front: boolean; back: boolean; company: boolean }
   verification_mode: string
+  provider_status?: string | null
+  provider_checks?: { document?: boolean; active_liveness?: boolean; face_match?: boolean; business_verified?: boolean; complete?: boolean } | null
 }
 interface Detail extends Summary {
-  identity: { document_type: string; document_number: string; document_country: string; date_of_birth: string; address: string }
+  identity: { document_type: string; document_number: string; document_country: string; date_of_birth: string; address: string } | null
 }
 interface QueueResponse { data: Summary[]; meta: { total: number; current_page: number; last_page: number } }
 
@@ -124,12 +126,25 @@ export default function KycValidationsPage() {
               {detail.data && <div className="space-y-4">
                 <div className="grid gap-3 text-sm sm:grid-cols-2">
                   <p><strong>Identité :</strong> {detail.data.person.name}</p>
+                  {detail.data.verification_mode === 'didit' && <p><strong>Prestataire :</strong> Didit · {detail.data.provider_status ?? 'En cours'}</p>}
+                  {detail.data.identity && <>
                   <p><strong>Document :</strong> {detail.data.identity.document_type}</p>
                   <p><strong>Numéro :</strong> {detail.data.identity.document_number}</p>
                   <p><strong>Pays :</strong> {detail.data.identity.document_country}</p>
                   <p><strong>Naissance :</strong> {detail.data.identity.date_of_birth}</p>
                   <p><strong>Adresse :</strong> {detail.data.identity.address}</p>
+                  </>}
                 </div>
+                {detail.data.verification_mode === 'didit' && <div className="rounded-xl border border-[var(--color-border)] p-4 text-sm">
+                  <p className="mb-2 font-bold">Résultats de vérification Didit</p>
+                  <p>Pièce officielle : {detail.data.provider_checks?.document ? 'Validée' : 'Non confirmée'}</p>
+                  <p>Selfie / preuve de vie active : {detail.data.provider_checks?.active_liveness ? 'Validée' : 'Non confirmée'}</p>
+                  <p>Comparaison faciale : {detail.data.provider_checks?.face_match ? 'Validée' : 'Non confirmée'}</p>
+                  {detail.data.person.person_type === 'legal' && <p>Vérification entreprise (KYB) : {detail.data.provider_checks?.business_verified ? 'Validée' : 'Non confirmée'}</p>}
+                  {!detail.data.provider_checks?.complete && <p role="alert" className="mt-2 font-semibold">
+                    Les contrôles biométriques ne sont pas tous confirmés : approbation bloquée.
+                  </p>}
+                </div>}
                 <div className="flex flex-wrap gap-2">
                   {(['front', 'back', 'company'] as const).filter(t => detail.data?.documents[t]).map(t =>
                     <button type="button" key={t} onClick={() => void document(t)}
@@ -149,7 +164,10 @@ export default function KycValidationsPage() {
                       value={reason} onChange={e => setReason(e.target.value)} />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={loading} onClick={() => void decide('approved')}
+                    <button type="button" disabled={loading || (detail.data.verification_mode === 'didit'
+                      && (!detail.data.provider_checks?.complete
+                        || (detail.data.person.person_type === 'legal' && !detail.data.provider_checks?.business_verified)))}
+                      onClick={() => void decide('approved')}
                       className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-bold text-white disabled:opacity-50">
                       <CheckCircle2 size={18} /> Approuver
                     </button>
