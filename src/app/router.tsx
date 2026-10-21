@@ -11,6 +11,7 @@ const SuperadminGovernancePage = lazy(() => import('@/pages/admin/SuperadminGove
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const MembresPage = lazy(() => import('@/pages/admin/MembresPage'))
 const ValidationsPage = lazy(() => import('@/pages/admin/ValidationsPage'))
+const KycValidationsPage = lazy(() => import('@/pages/admin/KycValidationsPage'))
 const FinancePage = lazy(() => import('@/pages/admin/FinancePage'))
 const ConfigurationPage = lazy(() => import('@/pages/admin/ConfigurationPage'))
 const ExportPage = lazy(() => import('@/pages/admin/ExportPage'))
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <S><AdminHomePage /></S> },
       { path: 'validations', element: <S><ValidationsPage /></S> },
+      { path: 'kyc', element: <S><KycValidationsPage /></S> },
       { path: 'finance', element: <S><FinancePage /></S> },
       { path: 'paiements', element: <S><PaiementsPage /></S> },
       { path: 'membres', element: <S><MembresPage /></S> },
