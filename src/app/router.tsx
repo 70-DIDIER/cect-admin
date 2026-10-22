@@ -6,6 +6,7 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const MembresPage = lazy(() => import('@/pages/admin/MembresPage'))
+const IdentityVerificationsPage = lazy(() => import('@/pages/admin/IdentityVerificationsPage'))
 const ValidationsPage = lazy(() => import('@/pages/admin/ValidationsPage'))
 const FinancePage = lazy(() => import('@/pages/admin/FinancePage'))
 const ConfigurationPage = lazy(() => import('@/pages/admin/ConfigurationPage'))
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'finance', element: <S><FinancePage /></S> },
       { path: 'paiements', element: <S><PaiementsPage /></S> },
       { path: 'membres', element: <S><MembresPage /></S> },
+      { path: 'verifications-identite', element: <S><IdentityVerificationsPage /></S> },
       { path: 'packs', element: <S><PacksPage /></S> },
       { path: 'cashback', element: <S><CashbackPage /></S> },
       { path: 'equipe', element: <S><EquipePage /></S> },
