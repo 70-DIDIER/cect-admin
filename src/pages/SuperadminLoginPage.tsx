@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import { FileKey2, LockKeyhole, MailCheck, ShieldCheck, RotateCcw, Download } from 'lucide-react'
@@ -29,15 +29,22 @@ export default function SuperadminLoginPage() {
   const [validityDays, setValidityDays] = useState(30)
   const [passphrase, setPassphrase] = useState('')
 
-  useEffect(() => {
-    let active = true
-    get<Status>('/superadmin/status').then((status) => {
-      if (!active) return
+  const checkCertificateStatus = useCallback(async () => {
+    setError('')
+    setStage('loading')
+    try {
+      const status = await get<Status>('/superadmin/status')
       setValidityDays(status.key_validity_days)
       setStage(status.initialized ? 'select-key' : 'enroll-emails')
-    }).catch((caught) => { if (active) setError(toApiError(caught).message) })
-    return () => { active = false }
+    } catch (caught) {
+      const failure = toApiError(caught)
+      setError(failure.status === 403
+        ? 'Accès refusé par le contrôle mTLS (403). Vérifiez votre certificat navigateur personnel (.p12), sa validité et sa révocation. La protection ne peut pas être désactivée depuis cette page.'
+        : failure.message)
+    }
   }, [])
+
+  useEffect(() => { void checkCertificateStatus() }, [checkCertificateStatus])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -48,7 +55,7 @@ export default function SuperadminLoginPage() {
   async function completeAccess() {
     const profile = await refresh()
     if (!profile || profile.role !== 'superadmin') throw new Error('Session SuperAdmin impossible à établir.')
-    navigate('/admin', { replace: true })
+    navigate('/admin/gouvernance', { replace: true })
   }
 
   async function prove(key: SuperadminKeyFile) {
@@ -138,7 +145,10 @@ export default function SuperadminLoginPage() {
             <h2 className="text-xl font-bold">{title[stage]}</h2>
           </div>
           {error && <p role="alert" className="rounded-xl bg-[var(--tone-danger-bg)] p-3 text-sm text-[var(--tone-danger-fg)]">{error}</p>}
-          {stage === 'loading' && <p role="status">Contrôle du certificat client en cours…</p>}
+          {stage === 'loading' && (error
+            ? <button type="button" onClick={() => void checkCertificateStatus()} className="min-h-11 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm font-bold hover:border-[var(--color-primary)]">Réessayer la vérification du certificat</button>
+            : <p role="status">Contrôle du certificat client en cours…</p>
+          )}
           {stage === 'enroll-emails' && (
             <form className="space-y-4" onSubmit={(event) => submit(event, async () => {
               if (new Set(emails.map((e) => e.trim().toLowerCase())).size !== 3) throw new Error('Choisissez trois adresses différentes.')
