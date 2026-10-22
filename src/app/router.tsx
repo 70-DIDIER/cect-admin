@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
+import { useAuth } from '@/app/AuthContext'
 
 const StaffLoginPage = lazy(() => import('@/pages/StaffLoginPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -27,6 +28,13 @@ const SUPERADMIN_PATH_MODE = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true
 const GUARDIAN_LOGIN_ENABLED = import.meta.env.VITE_STAFF_GUARDIAN_ENABLED === 'true'
 const ALLOW_SUPERADMIN_ENTRY = IS_SUPERADMIN_HOST || SUPERADMIN_PATH_MODE
 
+// Superadmin has a separate command center; regular staff keeps its existing dashboard.
+function RoleHome() {
+  const { user } = useAuth()
+  if (user?.role === 'superadmin') return <Navigate to="/admin/gouvernance" replace />
+  return <S><AdminHomePage /></S>
+}
+
 function Loading() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
@@ -49,7 +57,8 @@ const router = createBrowserRouter([
     path: '/admin',
     element: <AdminLayout />,
     children: [
-      { index: true, element: <S><AdminHomePage /></S> },
+      { index: true, element: <RoleHome /> },
+      { path: 'pilotage', element: <S><AdminHomePage /></S> },
       { path: 'validations', element: <S><ValidationsPage /></S> },
       { path: 'kyc', element: <S><KycValidationsPage /></S> },
       { path: 'finance', element: <S><FinancePage /></S> },
