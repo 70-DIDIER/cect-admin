@@ -68,6 +68,7 @@ function toAuthUser(api: ApiUser): AuthUser {
 
 export function homeFor(user: AuthUser): string {
   void user
+  if (user.role === 'superadmin') return '/admin/gouvernance'
   return user.role === 'validateur' ? '/admin/kyc' : '/admin'
 }
 
@@ -172,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const wasSuperadmin = isSuperadminClientMode()
       clearSession()
       clearSuperadminClientMode()
-      if (wasSuperadmin) window.location.assign('/connexion')
+      if (wasSuperadmin) window.location.assign('/superadmin/connexion')
     }
   }, [clearSession])
 
