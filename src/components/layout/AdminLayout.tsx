@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BadgePercent, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCog } from 'lucide-react'
+import { BadgePercent, CircleCheck, CreditCard, Download, Landmark, LayoutDashboard, Package, ScrollText, Settings, Users, UserCheck, UserCog } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { fetchAdminDashboard } from '@/data/adminDashboard'
 import { isAdminRole, type UserRole } from '@/lib/roles'
@@ -27,6 +27,7 @@ const NAV: AdminNavItem[] = [
   { section: 'Opérations', to: '/admin/finance', label: 'Finance', icon: Landmark, permissions: ['reports.view', 'payouts.view'], tab: true },
   { section: 'Opérations', to: '/admin/paiements', label: 'Paiements', icon: CreditCard, permissions: ['payments.view'] },
   { section: 'Gestion', to: '/admin/membres', label: 'Membres', icon: Users, permissions: ['members.view'], tab: true },
+  { section: 'Gestion', to: '/admin/verifications-identite', label: 'Vérifications d’identité', icon: UserCheck, permissions: ['identity_verifications.view'] },
   { section: 'Gestion', to: '/admin/packs', label: 'Packs', icon: Package, permissions: ['packs.view'] },
   { section: 'Gestion', to: '/admin/cashback', label: 'Cashback & pays', icon: BadgePercent, permissions: ['settings.view'] },
   { section: 'Gestion', to: '/admin/equipe', label: 'Équipe & rôles', icon: UserCog, permissions: ['staff.view', 'roles.view'] },
