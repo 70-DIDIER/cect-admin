@@ -108,12 +108,12 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
   ]
   if (plan.family !== 'PERSONNEL') {
     fields.push(
-      { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month', hint: 'Choisissez mensuelle pour une formule de 12 mensualités.' },
-      { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: '1 = tous les mois si la fréquence choisie est mensuelle.' },
-      { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12), hint: '12 signifie douze crédits YEM. La période initiale d’attente s’ajoute avant le premier crédit.' },
+      { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'half_month', hint: 'Définissez la fréquence librement : jour, semaine, quinzaine (2/mois) ou mois. Les packs du document initial ont 24 quinzaines.' },
+      { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: 'Exemples : 1 = chaque unité sélectionnée ; 2 semaines = toutes les deux semaines ; 1 quinzaine = 2 fois par mois.' },
+      { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 24), hint: 'Nombre de crédits sur tout le contrat (24 pour les packs de référence par quinzaine). Le délai initial s’ajoute avant la première distribution.' },
       ...(plan.family === 'CONSOMMATEUR' ? [] : [{
         name: 'quota_per_period', label: plan.family === 'VENDEUR' ? 'Quota de vente autorisé (YEM par période)' : 'Plafond YEM par période',
-        required: true, initial: base?.quota_per_period ?? '', hint: 'Exemple : 500 YEM autorisés chaque mois pendant 12 mois.',
+        required: true, initial: base?.quota_per_period ?? '', hint: 'Exemple : 40 YEM par quinzaine pendant 24 crédits ; calculé selon la fréquence définie.',
       }]),
       { name: 'cumulative', label: 'Reporter les YEM non utilisés à la période suivante ?', section: 'advanced', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
       { name: 'end_of_term', label: 'Que deviennent les YEM restants en fin de pack ?', section: 'advanced', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
@@ -122,7 +122,7 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
   } else {
     fields.push({
       name: 'min_topup_xof', label: 'Rechargement minimum autorisé (FCFA)', type: 'number',
-      initial: String(base?.rules?.min_topup_xof ?? 5000),
+      initial: String(base?.rules?.min_topup_xof ?? 650),
     })
   }
   if (plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') {
