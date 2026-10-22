@@ -64,6 +64,7 @@ const STATES: Record<Status, { label: string; tone: Tone }> = {
   archived: { label: 'Archivé', tone: 'neutral' },
 }
 const PERIODS = [
+  { value: 'half_month', label: 'Quinzaine (2 par mois)' },
   { value: 'month', label: 'Mensuelle' },
   { value: 'week', label: 'Hebdomadaire' },
   { value: 'day', label: 'Quotidienne' },
@@ -361,7 +362,7 @@ export default function PacksPage() {
   const [creating, setCreating] = useState(false)
   const [duplicating, setDuplicating] = useState<Plan | null>(null)
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const mayManage = can('packs.manage')
+  const mayManage = user?.role === 'superadmin' && can('packs.manage') && can('settings.update_critical')
   const superadmin = user?.role === 'superadmin' && can('settings.update_critical')
   const cashbackPolicy = useQuery({
     queryKey: ['packs-cashback-summary'],
