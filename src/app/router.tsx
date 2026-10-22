@@ -1,11 +1,13 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
+import { useAuth } from '@/app/AuthContext'
 
 const StaffLoginPage = lazy(() => import('@/pages/StaffLoginPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const ActivationPage = lazy(() => import('@/pages/ActivationPage'))
 const SuperadminLoginPage = lazy(() => import('@/pages/SuperadminLoginPage'))
+const SuperadminAccessGuidePage = lazy(() => import('@/pages/SuperadminAccessGuidePage'))
 const SuperadminSecurityPage = lazy(() => import('@/pages/admin/SuperadminSecurityPage'))
 const SuperadminGovernancePage = lazy(() => import('@/pages/admin/SuperadminGovernancePage'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
@@ -27,6 +29,13 @@ const SUPERADMIN_PATH_MODE = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true
 const GUARDIAN_LOGIN_ENABLED = import.meta.env.VITE_STAFF_GUARDIAN_ENABLED === 'true'
 const ALLOW_SUPERADMIN_ENTRY = IS_SUPERADMIN_HOST || SUPERADMIN_PATH_MODE
 
+// Superadmin has a separate command center; regular staff keeps its existing dashboard.
+function RoleHome() {
+  const { user } = useAuth()
+  if (user?.role === 'superadmin') return <Navigate to="/admin/gouvernance" replace />
+  return <S><AdminHomePage /></S>
+}
+
 function Loading() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
@@ -43,13 +52,15 @@ const router = createBrowserRouter([
   { path: '/', element: <Navigate to={IS_SUPERADMIN_HOST ? '/superadmin/connexion' : '/admin'} replace /> },
   { path: '/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : GUARDIAN_LOGIN_ENABLED ? <Navigate to="/equipe/connexion" replace /> : <S><LoginPage /></S> },
   { path: '/equipe/connexion', element: IS_SUPERADMIN_HOST ? <Navigate to="/superadmin/connexion" replace /> : GUARDIAN_LOGIN_ENABLED ? <S><StaffLoginPage /></S> : <Navigate to="/connexion" replace /> },
+  { path: '/acces-superadmin', element: <S><SuperadminAccessGuidePage /></S> },
   { path: '/superadmin/connexion', element: ALLOW_SUPERADMIN_ENTRY ? <S><SuperadminLoginPage /></S> : <Navigate to="/connexion" replace /> },
   { path: '/activation', element: GUARDIAN_LOGIN_ENABLED ? <Navigate to="/equipe/connexion" replace /> : <S><ActivationPage /></S> },
   {
     path: '/admin',
     element: <AdminLayout />,
     children: [
-      { index: true, element: <S><AdminHomePage /></S> },
+      { index: true, element: <RoleHome /> },
+      { path: 'pilotage', element: <S><AdminHomePage /></S> },
       { path: 'validations', element: <S><ValidationsPage /></S> },
       { path: 'kyc', element: <S><KycValidationsPage /></S> },
       { path: 'finance', element: <S><FinancePage /></S> },

@@ -107,7 +107,7 @@ export default function SuperadminGovernancePage() {
                 Les règles sensibles sont calculées, autorisées et historisées côté API ; les boutons ouvrent les modules existants.
               </p>
             </div>
-            <Link to="/admin" className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-semibold">Tableau de bord</Link>
+            <Link to="/admin/pilotage" className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-semibold hover:border-[var(--color-primary)]">Indicateurs & activité</Link>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-[var(--dash-bg)] p-4">

@@ -6,8 +6,14 @@ import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 const IS_SUPERADMIN_HOST = window.location.hostname.toLowerCase().startsWith('superadmin.')
 const PATH_MODE_ENABLED = import.meta.env.VITE_SUPERADMIN_PATH_MODE === 'true'
 const MODE_MARKER = 'cect.superadmin.path-mode'
-if (PATH_MODE_ENABLED && window.location.pathname.startsWith('/superadmin/')) {
-  window.sessionStorage.setItem(MODE_MARKER, '1')
+if (PATH_MODE_ENABLED) {
+  if (window.location.pathname.startsWith('/superadmin/')) {
+    window.sessionStorage.setItem(MODE_MARKER, '1')
+  } else if (window.location.pathname === '/connexion' || window.location.pathname.startsWith('/equipe/')) {
+    // A failed certificate enrollment must not strand an ordinary staff member
+    // on the same-origin mTLS API when they explicitly return to staff login.
+    window.sessionStorage.removeItem(MODE_MARKER)
+  }
 }
 export function isSuperadminClientMode(): boolean {
   return IS_SUPERADMIN_HOST || (PATH_MODE_ENABLED && window.sessionStorage.getItem(MODE_MARKER) === '1')

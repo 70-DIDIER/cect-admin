@@ -80,7 +80,7 @@ export default function StaffLoginPage() {
             {challenge && <button className="w-full text-sm text-[var(--color-text-muted)] underline" type="button" onClick={()=>{setChallenge('');setError('')}}>Changer de compte ou demander un nouveau code</button>}
           </form>
           <p className="mt-5 text-center text-xs text-[var(--color-text-muted)]">Les connexions hors des horaires autorisés sont refusées.</p>
-          <div className="mt-5 text-center"><Link to="/superadmin/connexion" className="text-sm text-[var(--color-primary)] underline">Accès SuperAdmin par certificat</Link></div>
+          <div className="mt-5 text-center"><Link to="/acces-superadmin" className="text-sm text-[var(--color-primary)] underline">Accès SuperAdmin par certificat</Link></div>
         </div>
       </section>
     </main>

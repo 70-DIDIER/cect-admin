@@ -23,8 +23,9 @@ interface AdminNavItem extends NavItem {
 }
 
 const NAV: AdminNavItem[] = [
+  { section: 'Direction', to: '/admin/gouvernance', label: 'Centre Superadmin', icon: ShieldCheck, permissions: ['settings.update_critical'], tab: true, tabLabel: 'Direction' },
   { section: 'Pilotage', to: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, end: true, permissions: [], tab: true, tabLabel: 'Accueil' },
-  { section: 'Pilotage', to: '/admin/gouvernance', label: 'Gouvernance SuperAdmin', icon: ShieldCheck, permissions: ['settings.update_critical'] },
+  { section: 'Pilotage', to: '/admin/pilotage', label: 'Indicateurs & activité', icon: LayoutDashboard, permissions: ['settings.update_critical'] },
   { section: 'Opérations', to: '/admin/kyc', label: 'Contrôles KYC', icon: ShieldCheck, permissions: ['kyc.review'], tab: true },
   { section: 'Opérations', to: '/admin/validations', label: 'Validations', icon: CircleCheck, permissions: ['payments.validate_manual', 'yem_validations.view'], tab: true },
   { section: 'Opérations', to: '/admin/finance', label: 'Finance', icon: Landmark, permissions: ['reports.view', 'payouts.view'], tab: true },
@@ -55,29 +56,46 @@ export function AdminLayout() {
 
   const sections = useMemo<NavSection[]>(() => {
     if (!role) return []
-    const visible = NAV.filter((item) => (role !== 'validateur' || item.to === '/admin/kyc') && (!['/admin/securite', '/admin/gouvernance'].includes(item.to) || role === 'superadmin') && (item.permissions.length === 0 || item.permissions.some(can)))
+    const visible = NAV.filter((item) =>
+      (role !== 'validateur' || item.to === '/admin/kyc') &&
+      (role !== 'superadmin' || item.to !== '/admin') &&
+      (role === 'superadmin' || !['/admin/securite', '/admin/gouvernance', '/admin/pilotage'].includes(item.to)) &&
+      (item.permissions.length === 0 || item.permissions.some(can))
+    )
     const titles = [...new Set(visible.map((item) => item.section))]
     return titles.map((title) => ({
       title,
       items: visible
         .filter((item) => item.section === title)
-        .map(({ section: _section, permissions: _permissions, ...item }) => (item.to === '/admin/validations' ? { ...item, badge: pendingCount } : item)),
+        .map(({ section: _section, permissions: _permissions, ...item }) => {
+          const badge = item.to === '/admin/validations' ? pendingCount : undefined
+          const tab = role === 'superadmin'
+            ? ['/admin/gouvernance', '/admin/packs', '/admin/membres', '/admin/finance'].includes(item.to)
+            : item.tab
+          return { ...item, tab, ...(badge !== undefined ? { badge } : {}) }
+        }),
     }))
   }, [role, pendingCount, can])
 
   if (loading) return <FullPageLoader />
   if (!user || !isAdminRole(user.role)) return <Navigate to={isSuperadminClientMode() ? '/superadmin/connexion' : '/connexion'} replace state={{ from: location.pathname }} />
+  // The common staff SPA may render public HTML, but a Superadmin session must
+  // never be presented as usable outside the certificate-verified origin.
+  if (user.role === 'superadmin' && !isSuperadminClientMode()) return <Navigate to="/superadmin/connexion" replace />
 
   const current = NAV.filter((item) => (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))).sort((a, b) => b.to.length - a.to.length)[0]
 
   async function handleLogout() {
+    const secureSession = role === 'superadmin' || isSuperadminClientMode()
     await logout()
-    navigate('/connexion')
+    // AuthContext performs an actual top-level redirect to the mTLS entry.
+    // A React Router navigation to ordinary /connexion would race with it.
+    if (!secureSession) navigate('/connexion')
   }
 
   return (
     <AppShell
-      brand={{ title: 'CECT Admin', subtitle: 'Coopérative CECT Togo' }}
+      brand={{ title: role === 'superadmin' ? 'CECT Superadmin' : 'CECT Administration', subtitle: role === 'superadmin' ? 'Direction générale · Gouvernance' : 'Coopérative CECT Togo' }}
       sections={sections}
       user={{ name: user.name, roleLabel: ROLE_LABELS[user.role] }}
       onLogout={() => void handleLogout()}

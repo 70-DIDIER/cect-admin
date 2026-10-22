@@ -26,6 +26,7 @@ interface Version {
   period: { unit: string; every: number; cycles: number } | null
   quota_per_period: string | null
   total_quota: string | null
+  first_credit_delay_periods?: number | null
   cumulative: boolean | null
   end_of_term: string | null
   min_operation: string | null
@@ -63,6 +64,7 @@ const STATES: Record<Status, { label: string; tone: Tone }> = {
   archived: { label: 'Archivé', tone: 'neutral' },
 }
 const PERIODS = [
+  { value: 'half_month', label: 'Quinzaine (2 par mois)' },
   { value: 'month', label: 'Mensuelle' },
   { value: 'week', label: 'Hebdomadaire' },
   { value: 'day', label: 'Quotidienne' },
@@ -95,35 +97,32 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
     { name: 'price_xof', label: plan.family === 'PERSONNEL' ? 'Coût d’ouverture du pack (FCFA)' : 'Prix payé à la souscription (FCFA)', type: 'number', required: true, initial: String(base?.price_xof ?? 0), hint: plan.family === 'CONSOMMATEUR' ? 'Si vous renseignez la valeur de référence plus bas, le prix sera égal à cette valeur.' : 'Le membre paie ce montant en FCFA pour accéder à la formule.' },
     {
       name: 'eligible', label: 'Qui peut souscrire ?', type: 'select', required: true,
-      initial: plan.family === 'MARCHAND' ? 'legal' : (base?.eligible_person_types?.length === 1 ? base.eligible_person_types[0] : 'both'),
+      initial: plan.family === 'MARCHAND' ? 'legal' : 'natural',
       options: plan.family === 'MARCHAND'
-        ? [{ value: 'legal', label: 'Personnes morales uniquement' }]
-        : [
-            { value: 'both', label: 'Personnes physiques et morales' },
-            { value: 'natural', label: 'Personnes physiques uniquement' },
-            { value: 'legal', label: 'Personnes morales uniquement' },
-          ],
+        ? [{ value: 'legal', label: 'Personnes morales uniquement (PM)' }]
+        : [{ value: 'natural', label: 'Personnes physiques uniquement (PF)' }],
+      hint: 'Règle métier CECT : seules les PM souscrivent Marchand ; les autres familles sont réservées aux PF.',
     },
     { name: 'min_operation', label: 'Minimum par transaction (YEM)', section: 'advanced', hint: 'Laisser vide s’il n’y a pas de minimum.', initial: base?.min_operation ?? '' },
     { name: 'max_operation', label: 'Maximum par transaction (YEM)', section: 'advanced', hint: 'Doit être inférieur ou égal au quota par période.', initial: base?.max_operation ?? '' },
   ]
   if (plan.family !== 'PERSONNEL') {
     fields.push(
-      { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'month', hint: 'Choisissez mensuelle pour une formule de 12 mensualités.' },
-      { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: '1 = tous les mois si la fréquence choisie est mensuelle.' },
-      { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 12), hint: '12 signifie douze distributions ; avec une fréquence mensuelle, le pack dure 12 mois.' },
+      { name: 'unit', label: 'Fréquence de distribution des YEM', type: 'select', options: PERIODS, initial: base?.period?.unit ?? 'half_month', hint: 'Définissez la fréquence librement : jour, semaine, quinzaine (2/mois) ou mois. Les packs du document initial ont 24 quinzaines.' },
+      { name: 'every', label: 'Tous les combien de cycles ?', type: 'number', section: 'advanced', required: true, initial: String(base?.period?.every ?? 1), hint: 'Exemples : 1 = chaque unité sélectionnée ; 2 semaines = toutes les deux semaines ; 1 quinzaine = 2 fois par mois.' },
+      { name: 'cycles', label: 'Durée : nombre de versements de YEM', type: 'number', required: true, initial: String(base?.period?.cycles ?? 24), hint: 'Nombre de crédits sur tout le contrat (24 pour les packs de référence par quinzaine). Le délai initial s’ajoute avant la première distribution.' },
       ...(plan.family === 'CONSOMMATEUR' ? [] : [{
         name: 'quota_per_period', label: plan.family === 'VENDEUR' ? 'Quota de vente autorisé (YEM par période)' : 'Plafond YEM par période',
-        required: true, initial: base?.quota_per_period ?? '', hint: 'Exemple : 500 YEM autorisés chaque mois pendant 12 mois.',
+        required: true, initial: base?.quota_per_period ?? '', hint: 'Exemple : 40 YEM par quinzaine pendant 24 crédits ; calculé selon la fréquence définie.',
       }]),
       { name: 'cumulative', label: 'Reporter les YEM non utilisés à la période suivante ?', section: 'advanced', type: 'select', options: [{ value: 'true', label: 'Oui' }, { value: 'false', label: 'Non' }], initial: String(base?.cumulative ?? (plan.family === 'VENDEUR')) },
       { name: 'end_of_term', label: 'Que deviennent les YEM restants en fin de pack ?', section: 'advanced', type: 'select', options: END_TERM, initial: base?.end_of_term ?? 'expire' },
-      { name: 'first_credit_delay_periods', label: 'Délai avant la première distribution', section: 'advanced', type: 'number', initial: String(base?.rules?.first_credit_delay_periods ?? 0), hint: '0 = immédiatement ; 1 = après une période complète.' },
+      { name: 'first_credit_delay_periods', label: 'Attente avant le 1er crédit YEM (en périodes)', type: 'number', required: true, initial: String(base?.rules?.first_credit_delay_periods ?? (plan.family === 'VENDEUR' ? 1 : 0)), hint: '0 = à la confirmation du paiement ; 1 = après une période entière ; jusqu’à 12. Fixé dans cette version, il ne modifie pas les contrats déjà actifs.' },
     )
   } else {
     fields.push({
       name: 'min_topup_xof', label: 'Rechargement minimum autorisé (FCFA)', type: 'number',
-      initial: String(base?.rules?.min_topup_xof ?? 5000),
+      initial: String(base?.rules?.min_topup_xof ?? 650),
     })
   }
   if (plan.family === 'CONSOMMATEUR' || plan.family === 'PERSONNEL') {
@@ -164,10 +163,10 @@ function versionFields(plan: Plan, base: Version | null): FormField[] {
 function versionPayload(plan: Plan, values: Record<string, string>, base: Version | null): Record<string, unknown> {
   const price = Number(values.price_xof)
   if (!Number.isSafeInteger(price) || price < 0) throw new Error('Le prix doit être un montant entier positif ou nul.')
-  const eligibilities = values.eligible === 'both' ? ['natural', 'legal'] : [values.eligible]
+  const eligibilities = plan.family === 'MARCHAND' ? ['legal'] : ['natural']
   const payload: Record<string, unknown> = {
     price_xof: price,
-    eligible_person_types: plan.family === 'MARCHAND' ? ['legal'] : eligibilities,
+    eligible_person_types: eligibilities,
     reason: values.reason,
     min_operation: values.min_operation?.trim() || null,
     max_operation: values.max_operation?.trim() || null,
@@ -177,7 +176,11 @@ function versionPayload(plan: Plan, values: Record<string, string>, base: Versio
     payload.period = { unit: values.unit, every: Number(values.every), cycles: Number(values.cycles) }
     payload.cumulative = values.cumulative === 'true'
     payload.end_of_term = values.end_of_term
-    rules.first_credit_delay_periods = Number(values.first_credit_delay_periods || 0)
+    const delay = Number(values.first_credit_delay_periods)
+    if (!Number.isSafeInteger(delay) || delay < 0 || delay > 12) {
+      throw new Error('Le délai avant le premier crédit doit être un nombre entier de 0 à 12 périodes.')
+    }
+    rules.first_credit_delay_periods = delay
     if (plan.family === 'CONSOMMATEUR') {
       if (price <= 0) throw new Error('Le prix du pack Consommateur doit être supérieur à zéro.')
       // One FCFA amount is the source of truth. The API snapshots its YEM
@@ -265,7 +268,8 @@ function VersionHistory({ plan, close, changed, manage }: { plan: Plan; close: (
               </div>
               <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
                 <p>Quota : {amount(version.quota_per_period)} {version.period?.unit === 'month' ? '/mois' : '/cycle'}</p>
-                <p>Durée : {version.period ? version.period.cycles + ' cycles' : 'Sans durée imposée'}</p>
+                <p>Crédits prévus : {version.period ? version.period.cycles + ' périodes' : 'Aucun crédit périodique'}</p>
+                {version.period && <p>Premier crédit : {(version.first_credit_delay_periods ?? (plan.family === 'VENDEUR' ? 1 : 0)) === 0 ? 'À l’activation, après paiement intégral' : 'Après ' + (version.first_credit_delay_periods ?? (plan.family === 'VENDEUR' ? 1 : 0)) + ' période(s) depuis l’activation'}</p>}
                 <p>Éligibilité : {(version.eligible_person_types ?? []).map(t => t === 'natural' ? 'PF' : 'PM').join(' / ')}</p>
                 <p>Cumul : {version.cumulative == null ? 'Sans objet' : version.cumulative ? 'Oui' : 'Non'}</p>
                 <p>Min / max : {version.min_operation ?? '—'} / {version.max_operation ?? '—'} YEM</p>
@@ -358,7 +362,7 @@ export default function PacksPage() {
   const [creating, setCreating] = useState(false)
   const [duplicating, setDuplicating] = useState<Plan | null>(null)
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
-  const mayManage = can('packs.manage')
+  const mayManage = user?.role === 'superadmin' && can('packs.manage') && can('settings.update_critical')
   const superadmin = user?.role === 'superadmin' && can('settings.update_critical')
   const cashbackPolicy = useQuery({
     queryKey: ['packs-cashback-summary'],
@@ -649,6 +653,7 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
     >
       {(values) => {
         const cycles = Number(values.cycles || 0)
+        const delayPeriods = Number(values.first_credit_delay_periods ?? (plan.family === 'VENDEUR' ? 1 : 0))
         const quota = Number(values.quota_per_period || 0)
         const isReference = plan.family === 'CONSOMMATEUR'
         const reference = Number(values.price_xof || 0)
@@ -696,6 +701,12 @@ function VersionDialog({ plan, close, changed }: { plan: Plan; close: () => void
             {(plan.family === 'VENDEUR' || plan.family === 'MARCHAND') && (
               <p className="mt-2 font-semibold">{total === null ? 'Renseignez le plafond YEM et la durée.' : `${cycles} périodes × ${display(purchaseYem)} YEM = ${display(total)} YEM de quota sur la durée.`} Aucun cashback sur cette famille.</p>
             )}
+            {plan.family !== 'PERSONNEL' && <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[.06] p-3 text-xs leading-6">
+              <p className="font-extrabold text-[var(--color-text)]">Calendrier contractuel du premier crédit</p>
+              <p>{delayPeriods === 0 ? 'Premier crédit immédiatement après paiement intégral confirmé.' : `Premier crédit après ${delayPeriods} période(s) d’attente depuis l’activation, et non à la date de paiement.`}</p>
+              <p>{cycles} crédits YEM au total · {cycles > 0 ? (cycles + Math.max(0, delayPeriods)) : 0} période(s) entre l’activation et la fin du dernier cycle.</p>
+              <p className="text-[var(--color-text-muted)]">Les dates exactes seront fixées lors de l’activation. Les contrats existants restent inchangés.</p>
+            </div>}
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">Aperçu indicatif. Le serveur calcule les quantités exactes à 6 décimales, conserve les règles de la version publiée et crédite les bonus uniquement après paiement confirmé.</p>
           </div>
         )

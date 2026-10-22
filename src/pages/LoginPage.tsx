@@ -125,7 +125,7 @@ export default function LoginPage() {
               </p>
               <div className="mt-5 border-t border-[var(--color-border)] pt-4 text-center">
                 <a
-                  href="/superadmin/connexion?acces=certificat"
+                  href="/acces-superadmin"
                   className="inline-flex items-center gap-2 font-semibold text-sm text-[var(--color-primary)] underline underline-offset-4"
                 >
                   <ShieldCheck size={17} aria-hidden />
