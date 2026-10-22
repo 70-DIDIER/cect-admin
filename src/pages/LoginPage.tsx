@@ -116,12 +116,26 @@ export default function LoginPage() {
             </form>
           )}
           {!challenge && (
-            <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
-              Compte créé par la CECT ?{' '}
-              <Link to="/activation" className="font-semibold text-[var(--color-primary)] hover:underline">
-                Activer mon compte
-              </Link>
-            </p>
+            <>
+              <p className="mt-4 text-center text-sm text-[var(--color-text-muted)]">
+                Compte créé par la CECT ?{' '}
+                <Link to="/activation" className="font-semibold text-[var(--color-primary)] hover:underline">
+                  Activer mon compte
+                </Link>
+              </p>
+              <div className="mt-5 border-t border-[var(--color-border)] pt-4 text-center">
+                <a
+                  href="/superadmin/connexion?acces=certificat"
+                  className="inline-flex items-center gap-2 font-semibold text-sm text-[var(--color-primary)] underline underline-offset-4"
+                >
+                  <ShieldCheck size={17} aria-hidden />
+                  Accès Superadmin sécurisé
+                </a>
+                <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                  Réservé au détenteur du certificat navigateur et du fichier .cectkey.
+                </p>
+              </div>
+            </>
           )}
         </div>
       </main>
